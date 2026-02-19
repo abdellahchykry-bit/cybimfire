@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Plus, Play, Image as ImageIcon, Video } from 'lucide-react';
@@ -14,8 +14,9 @@ import type { MediaItem } from '@/lib/types';
 
 const DURATION_OPTIONS = [5, 10, 15, 20, 30, 60];
 
-export default function CampaignEditorPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function CampaignEditorPage() {
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
   const { getCampaignById, updateCampaign, deleteCampaign, addMediaItem } = useCampaigns();
   const [campaign, setCampaign] = useState(getCampaignById(id));

@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCampaigns } from '@/hooks/use-campaigns';
 import { useSettings } from '@/hooks/use-settings';
 import { cn } from '@/lib/utils';
 import type { Campaign } from '@/lib/types';
 
-export default function PlayPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function PlayPage() {
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
   const { getCampaignById } = useCampaigns();
   const { settings, updateSettings } = useSettings();
