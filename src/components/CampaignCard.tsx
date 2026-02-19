@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Play, Trash2, Image as ImageIcon } from 'lucide-react';
 import type { Campaign } from '@/lib/types';
 import { useCampaigns } from '@/hooks/use-campaigns';
@@ -13,6 +14,7 @@ interface CampaignCardProps {
 }
 
 export default function CampaignCard({ campaign }: CampaignCardProps) {
+  const router = useRouter();
   const { deleteCampaign } = useCampaigns();
   const thumbnail = campaign.media.find(item => item.type === 'image')?.url || campaign.media[0]?.url;
 
@@ -20,6 +22,12 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
     e.stopPropagation();
     e.preventDefault();
     deleteCampaign(campaign.id);
+  };
+  
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    router.push(`/campaigns/${campaign.id}/play`);
   };
 
   return (
@@ -46,12 +54,10 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
           <CardTitle className="text-lg font-headline truncate">{campaign.name}</CardTitle>
         </CardContent>
         <CardFooter className="p-2 pt-0 flex justify-between">
-          <Link href={`/campaigns/${campaign.id}/play`} passHref>
-            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+          <Button variant="ghost" size="icon" onClick={handlePlay}>
               <Play />
               <span className="sr-only">Play {campaign.name}</span>
-            </Button>
-          </Link>
+          </Button>
           <Button variant="destructive" size="icon" onClick={handleDelete}>
             <Trash2 />
             <span className="sr-only">Delete {campaign.name}</span>
