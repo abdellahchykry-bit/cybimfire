@@ -15,19 +15,20 @@ import type { MediaItem } from '@/lib/types';
 const DURATION_OPTIONS = [5, 10, 15, 20, 30, 60];
 
 export default function CampaignEditorPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const router = useRouter();
   const { getCampaignById, updateCampaign, deleteCampaign, addMediaItem } = useCampaigns();
-  const [campaign, setCampaign] = useState(getCampaignById(params.id));
+  const [campaign, setCampaign] = useState(getCampaignById(id));
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
 
   useEffect(() => {
-    const updatedCampaign = getCampaignById(params.id);
+    const updatedCampaign = getCampaignById(id);
     if (!updatedCampaign) {
       router.push('/');
     } else {
       setCampaign(updatedCampaign);
     }
-  }, [params.id, getCampaignById, router]);
+  }, [id, getCampaignById, router]);
 
   if (!campaign) {
     return <div className="flex items-center justify-center min-h-screen">Loading campaign...</div>;

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import type { Campaign } from '@/lib/types';
 
 export default function PlayPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const router = useRouter();
   const { getCampaignById } = useCampaigns();
   const { settings, updateSettings } = useSettings();
@@ -20,9 +21,9 @@ export default function PlayPage({ params }: { params: { id: string } }) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    setCampaign(getCampaignById(params.id));
-    updateSettings({ lastPlayedCampaignId: params.id });
-  }, [params.id, getCampaignById, updateSettings]);
+    setCampaign(getCampaignById(id));
+    updateSettings({ lastPlayedCampaignId: id });
+  }, [id, getCampaignById, updateSettings]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
