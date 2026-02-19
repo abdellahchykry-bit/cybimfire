@@ -18,23 +18,30 @@ export default function CampaignEditorPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { campaigns, updateCampaign, addMediaItem } = useCampaigns();
-  const [campaign, setCampaign] = useState<Campaign | undefined>(campaigns.find(c => c.id === id));
+  const { campaigns, getCampaignById, updateCampaign, addMediaItem } = useCampaigns();
+  
+  const campaign = getCampaignById(id);
+  
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
 
   useEffect(() => {
-    const updatedCampaign = campaigns.find(c => c.id === id);
-    if (!updatedCampaign) {
-      if (campaigns.length > 0) {
-        router.push('/');
-      }
-    } else {
-      setCampaign(updatedCampaign);
-      if (updatedCampaign.media.length > 0 && !selectedMediaId) {
-        setSelectedMediaId(updatedCampaign.media[0].id);
-      }
+    // Redirect if campaign not found after campaigns load
+    if (campaigns.length > 0 && !campaign) {
+      router.push('/');
+      return;
     }
-  }, [id, campaigns, router, selectedMediaId]);
+    
+    // Auto-select first media item
+    if (campaign && campaign.media.length > 0 && !selectedMediaId) {
+      setSelectedMediaId(campaign.media[0].id);
+    }
+    
+    // If the selected media item no longer exists, update selection
+    if (campaign && selectedMediaId && !campaign.media.find(m => m.id === selectedMediaId)) {
+        setSelectedMediaId(campaign.media.length > 0 ? campaign.media[0].id : null)
+    }
+
+  }, [id, campaign, campaigns, router, selectedMediaId]);
 
   if (!campaign) {
     return <div className="flex items-center justify-center min-h-screen">Loading campaign...</div>;
@@ -57,9 +64,6 @@ export default function CampaignEditorPage() {
     const newMedia = campaign.media.filter(m => m.id !== mediaId);
     const updatedCampaign = { ...campaign, media: newMedia };
     updateCampaign(updatedCampaign);
-    if (selectedMediaId === mediaId) {
-      setSelectedMediaId(null);
-    }
   };
   
   const handleDurationChange = (duration: string) => {
@@ -70,7 +74,9 @@ export default function CampaignEditorPage() {
   }
 
   const handleAddMedia = (type: 'image' | 'video') => {
-    addMediaItem(campaign.id, type);
+    if (campaign) {
+      addMediaItem(campaign.id, type);
+    }
   }
 
   return (

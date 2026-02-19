@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
@@ -12,9 +12,11 @@ export default function PlayPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { campaigns } = useCampaigns();
+  const { campaigns, getCampaignById } = useCampaigns();
   const { settings, updateSettings } = useSettings();
-  const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
+  
+  const campaign = getCampaignById(id);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   
@@ -22,12 +24,10 @@ export default function PlayPage() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const currentCampaign = campaigns.find(c => c.id === id);
-    setCampaign(currentCampaign);
-    if (currentCampaign) {
+    if (campaign) {
       updateSettings({ lastPlayedCampaignId: id });
     }
-  }, [id, campaigns, updateSettings]);
+  }, [id, campaign, updateSettings]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -40,10 +40,10 @@ export default function PlayPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [router]);
   
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
     if (!campaign || campaign.media.length === 0) return;
     setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
-  };
+  }, [campaign]);
 
   useEffect(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -58,7 +58,7 @@ export default function PlayPage() {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [currentIndex, campaign, isExiting]);
+  }, [currentIndex, campaign, isExiting, goToNext]);
   
   const handleVideoEnd = () => {
     goToNext();
@@ -74,6 +74,15 @@ export default function PlayPage() {
   };
   
   if (!campaign) {
+    if (campaigns.length > 0) {
+      // campaigns are loaded but this one doesn't exist.
+      return (
+          <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
+              <p>Campaign not found.</p>
+              <button onClick={() => router.push('/')} className="px-4 py-2 border rounded">Go Home</button>
+          </div>
+      );
+    }
     return <div className="bg-black flex items-center justify-center h-screen w-screen text-white">Loading...</div>;
   }
   
