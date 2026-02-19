@@ -5,12 +5,12 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Plus, Play, Image as ImageIcon, Video } from 'lucide-react';
-import { useCampaigns } from '@/hooks/use-campaigns';
+import { useCampaigns } from '@/context/CampaignsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import type { MediaItem } from '@/lib/types';
+import type { Campaign, MediaItem } from '@/lib/types';
 
 const DURATION_OPTIONS = [5, 10, 15, 20, 30, 60];
 
@@ -18,18 +18,23 @@ export default function CampaignEditorPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { getCampaignById, updateCampaign, deleteCampaign, addMediaItem } = useCampaigns();
-  const [campaign, setCampaign] = useState(getCampaignById(id));
+  const { campaigns, updateCampaign, addMediaItem } = useCampaigns();
+  const [campaign, setCampaign] = useState<Campaign | undefined>(campaigns.find(c => c.id === id));
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
 
   useEffect(() => {
-    const updatedCampaign = getCampaignById(id);
+    const updatedCampaign = campaigns.find(c => c.id === id);
     if (!updatedCampaign) {
-      router.push('/');
+      if (campaigns.length > 0) {
+        router.push('/');
+      }
     } else {
       setCampaign(updatedCampaign);
+      if (updatedCampaign.media.length > 0 && !selectedMediaId) {
+        setSelectedMediaId(updatedCampaign.media[0].id);
+      }
     }
-  }, [id, getCampaignById, router]);
+  }, [id, campaigns, router, selectedMediaId]);
 
   if (!campaign) {
     return <div className="flex items-center justify-center min-h-screen">Loading campaign...</div>;
@@ -38,36 +43,34 @@ export default function CampaignEditorPage() {
   const selectedMedia = campaign.media.find(m => m.id === selectedMediaId);
 
   const handleMove = (index: number, direction: 'up' | 'down') => {
+    if (!campaign) return;
     const newMedia = [...campaign.media];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newMedia.length) return;
     [newMedia[index], newMedia[targetIndex]] = [newMedia[targetIndex], newMedia[index]];
     const updatedCampaign = { ...campaign, media: newMedia };
     updateCampaign(updatedCampaign);
-    setCampaign(updatedCampaign);
   };
 
   const handleDelete = (mediaId: string) => {
+    if (!campaign) return;
     const newMedia = campaign.media.filter(m => m.id !== mediaId);
     const updatedCampaign = { ...campaign, media: newMedia };
     updateCampaign(updatedCampaign);
-    setCampaign(updatedCampaign);
     if (selectedMediaId === mediaId) {
       setSelectedMediaId(null);
     }
   };
   
   const handleDurationChange = (duration: string) => {
-    if (!selectedMediaId) return;
+    if (!selectedMediaId || !campaign) return;
     const newMedia = campaign.media.map(m => m.id === selectedMediaId ? { ...m, duration: parseInt(duration) } : m);
     const updatedCampaign = { ...campaign, media: newMedia };
     updateCampaign(updatedCampaign);
-    setCampaign(updatedCampaign);
   }
 
   const handleAddMedia = (type: 'image' | 'video') => {
     addMediaItem(campaign.id, type);
-    // The hook updates the state, which will be reflected via useEffect
   }
 
   return (

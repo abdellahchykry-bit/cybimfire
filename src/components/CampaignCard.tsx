@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Play, Trash2, Image as ImageIcon } from 'lucide-react';
 import type { Campaign } from '@/lib/types';
-import { useCampaigns } from '@/hooks/use-campaigns';
+import { useCampaigns } from '@/context/CampaignsContext';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -21,6 +21,7 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    // Consider adding a confirmation dialog here
     deleteCampaign(campaign.id);
   };
   

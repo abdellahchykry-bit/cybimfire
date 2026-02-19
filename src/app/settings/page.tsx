@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowLeft, RotateCcw, RotateCw, ScreenShare, ToggleLeft, ToggleRight } from 'lucide-react';
-import { useSettings } from '@/hooks/use-settings';
+import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';

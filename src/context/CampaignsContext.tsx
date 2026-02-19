@@ -1,11 +1,25 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import type { Campaign, MediaItem } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const STORAGE_KEY = 'cybim_campaigns';
 
+// The context shape
+interface CampaignsContextType {
+  campaigns: Campaign[];
+  getCampaignById: (id: string) => Campaign | undefined;
+  addCampaign: () => Campaign;
+  updateCampaign: (updatedCampaign: Campaign) => void;
+  deleteCampaign: (campaignId: string) => void;
+  addMediaItem: (campaignId: string, type: 'image' | 'video') => void;
+}
+
+// Create the context
+const CampaignsContext = createContext<CampaignsContextType | undefined>(undefined);
+
+// Helper function to get initial state from localStorage
 const getInitialCampaigns = (): Campaign[] => {
   if (typeof window === 'undefined') {
     return [];
@@ -19,7 +33,8 @@ const getInitialCampaigns = (): Campaign[] => {
   }
 };
 
-export function useCampaigns() {
+// The provider component
+export function CampaignsProvider({ children }: { children: ReactNode }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
   useEffect(() => {
@@ -98,6 +113,21 @@ export function useCampaigns() {
     },
     [getCampaignById, updateCampaign]
   );
+  
+  const value = { campaigns, getCampaignById, addCampaign, updateCampaign, deleteCampaign, addMediaItem };
 
-  return { campaigns, getCampaignById, addCampaign, updateCampaign, deleteCampaign, addMediaItem };
+  return (
+    <CampaignsContext.Provider value={value}>
+      {children}
+    </CampaignsContext.Provider>
+  );
+}
+
+// The custom hook to consume the context
+export function useCampaigns() {
+  const context = useContext(CampaignsContext);
+  if (context === undefined) {
+    throw new Error('useCampaigns must be used within a CampaignsProvider');
+  }
+  return context;
 }

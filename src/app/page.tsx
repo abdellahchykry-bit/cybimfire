@@ -8,8 +8,8 @@ import { Card } from '@/components/ui/card';
 import CybimLogo from '@/components/icons/CybimLogo';
 import Clock from '@/components/Clock';
 import CampaignCard from '@/components/CampaignCard';
-import { useCampaigns } from '@/hooks/use-campaigns';
-import { useSettings } from '@/hooks/use-settings';
+import { useCampaigns } from '@/context/CampaignsContext';
+import { useSettings } from '@/context/SettingsContext';
 import { useEffect, useState } from 'react';
 
 export default function Home() {

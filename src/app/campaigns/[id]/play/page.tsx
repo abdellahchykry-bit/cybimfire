@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { useCampaigns } from '@/hooks/use-campaigns';
-import { useSettings } from '@/hooks/use-settings';
+import { useCampaigns } from '@/context/CampaignsContext';
+import { useSettings } from '@/context/SettingsContext';
 import { cn } from '@/lib/utils';
 import type { Campaign } from '@/lib/types';
 
@@ -12,7 +12,7 @@ export default function PlayPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { getCampaignById } = useCampaigns();
+  const { campaigns } = useCampaigns();
   const { settings, updateSettings } = useSettings();
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -22,9 +22,12 @@ export default function PlayPage() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    setCampaign(getCampaignById(id));
-    updateSettings({ lastPlayedCampaignId: id });
-  }, [id, getCampaignById, updateSettings]);
+    const currentCampaign = campaigns.find(c => c.id === id);
+    setCampaign(currentCampaign);
+    if (currentCampaign) {
+      updateSettings({ lastPlayedCampaignId: id });
+    }
+  }, [id, campaigns, updateSettings]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

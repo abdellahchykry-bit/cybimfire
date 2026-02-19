@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { cn } from '@/lib/utils';
+import { AppProviders } from '@/providers';
 
 export const metadata: Metadata = {
   title: 'CYBIM - Offline Signage Player',
@@ -24,7 +25,9 @@ export default function RootLayout({
         />
       </head>
       <body className={cn('font-body antialiased', 'bg-background text-foreground')} suppressHydrationWarning>
-        {children}
+        <AppProviders>
+          {children}
+        </AppProviders>
         <Toaster />
       </body>
     </html>

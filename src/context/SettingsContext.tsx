@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import type { AppSettings } from '@/lib/types';
 
 const STORAGE_KEY = 'cybim_settings';
@@ -11,6 +11,17 @@ const DEFAULTS: AppSettings = {
   lastPlayedCampaignId: null,
 };
 
+// The context shape
+interface SettingsContextType {
+  settings: AppSettings;
+  updateSettings: (newSettings: Partial<AppSettings>) => void;
+}
+
+// Create the context
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+
+
+// Helper function to get initial state from localStorage
 const getInitialSettings = (): AppSettings => {
   if (typeof window === 'undefined') {
     return DEFAULTS;
@@ -24,7 +35,8 @@ const getInitialSettings = (): AppSettings => {
   }
 };
 
-export function useSettings() {
+// The provider component
+export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULTS);
 
   useEffect(() => {
@@ -43,5 +55,20 @@ export function useSettings() {
     });
   }, []);
 
-  return { settings, updateSettings };
+  const value = { settings, updateSettings };
+  
+  return (
+    <SettingsContext.Provider value={value}>
+      {children}
+    </SettingsContext.Provider>
+  );
+}
+
+// The custom hook to consume the context
+export function useSettings() {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error('useSettings must be used within a SettingsProvider');
+  }
+  return context;
 }
