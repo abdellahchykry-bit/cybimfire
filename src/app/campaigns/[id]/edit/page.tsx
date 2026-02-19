@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Plus, Play, Image as ImageIcon, Video } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Play, Image as ImageIcon, Video } from 'lucide-react';
 import { useCampaigns } from '@/context/CampaignsContext';
+import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -18,11 +19,15 @@ export default function CampaignEditorPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { campaigns, getCampaignById, updateCampaign, addMediaItem } = useCampaigns();
+  const { campaigns, getCampaignById, updateCampaign } = useCampaigns();
+  const { settings } = useSettings();
   
   const campaign = getCampaignById(id);
   
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
+  
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Redirect if campaign not found after campaigns load
@@ -73,11 +78,45 @@ export default function CampaignEditorPage() {
     updateCampaign(updatedCampaign);
   }
 
-  const handleAddMedia = (type: 'image' | 'video') => {
-    if (campaign) {
-      addMediaItem(campaign.id, type);
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+    const file = event.target.files?.[0];
+    if (!file || !campaign) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const url = e.target?.result as string;
+
+        if (type === 'image') {
+            const newItem: MediaItem = {
+                id: crypto.randomUUID(),
+                type: 'image',
+                url,
+                duration: settings.defaultImageDuration,
+            };
+            const updatedCampaign = { ...campaign, media: [...campaign.media, newItem] };
+            updateCampaign(updatedCampaign);
+        } else { // video
+            const videoElement = document.createElement('video');
+            videoElement.preload = 'metadata';
+            videoElement.onloadedmetadata = () => {
+                const newItem: MediaItem = {
+                    id: crypto.randomUUID(),
+                    type: 'video',
+                    url,
+                    duration: videoElement.duration,
+                };
+                const updatedCampaign = { ...campaign, media: [...campaign.media, newItem] };
+                updateCampaign(updatedCampaign);
+            };
+            videoElement.src = url;
+        }
+    };
+    reader.readAsDataURL(file);
+    
+    if(event.target) {
+        event.target.value = '';
     }
-  }
+  };
 
   return (
     <div className="flex flex-col min-h-screen p-8">
@@ -121,7 +160,7 @@ export default function CampaignEditorPage() {
                   </div>
                   <div className="flex-1 truncate">
                     <p className="font-medium">{`Item ${index + 1}`}</p>
-                    <p className="text-sm text-muted-foreground truncate">{item.url}</p>
+                    <p className="text-sm text-muted-foreground truncate">{item.url.startsWith('data:') ? `Uploaded ${item.type}` : item.url}</p>
                   </div>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" disabled={index === 0} onClick={() => handleMove(index, 'up')}><ArrowUp /></Button>
@@ -141,9 +180,11 @@ export default function CampaignEditorPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <h3 className="font-semibold">Add Media</h3>
+              <input type="file" ref={imageInputRef} onChange={(e) => handleFileSelect(e, 'image')} accept="image/*" style={{ display: 'none' }} />
+              <input type="file" ref={videoInputRef} onChange={(e) => handleFileSelect(e, 'video')} accept="video/*" style={{ display: 'none' }} />
               <div className="flex gap-2">
-                <Button className="flex-1" onClick={() => handleAddMedia('image')}><ImageIcon className="mr-2"/> Add Image</Button>
-                <Button className="flex-1" onClick={() => handleAddMedia('video')}><Video className="mr-2"/> Add Video</Button>
+                <Button className="flex-1" onClick={() => imageInputRef.current?.click()}><ImageIcon className="mr-2"/> Upload Image</Button>
+                <Button className="flex-1" onClick={() => videoInputRef.current?.click()}><Video className="mr-2"/> Upload Video</Button>
               </div>
             </div>
 
@@ -164,7 +205,7 @@ export default function CampaignEditorPage() {
             )}
              {selectedMedia && selectedMedia.type === 'video' && (
               <div className="text-muted-foreground p-4 border border-dashed rounded-md">
-                Video duration is determined by the video file itself.
+                Video duration is determined by the video file itself. ({selectedMedia.duration.toFixed(1)}s)
               </div>
             )}
             {!selectedMediaId && (

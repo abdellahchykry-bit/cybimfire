@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import type { Campaign, MediaItem } from '@/lib/types';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const STORAGE_KEY = 'cybim_campaigns';
 
@@ -13,7 +12,6 @@ interface CampaignsContextType {
   addCampaign: () => Campaign;
   updateCampaign: (updatedCampaign: Campaign) => void;
   deleteCampaign: (campaignId: string) => void;
-  addMediaItem: (campaignId: string, type: 'image' | 'video') => void;
 }
 
 // Create the context
@@ -93,28 +91,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     },
     [campaigns, saveCampaigns]
   );
-
-  const addMediaItem = useCallback(
-    (campaignId: string, type: 'image' | 'video') => {
-      const campaign = getCampaignById(campaignId);
-      if (!campaign) return;
-      
-      const placeholder = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)];
-      
-      const newItem: MediaItem = {
-        id: crypto.randomUUID(),
-        type: type,
-        url: type === 'image' ? placeholder.imageUrl : "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-        duration: 10, // Default duration for new images
-      };
-      
-      const updatedCampaign = { ...campaign, media: [...campaign.media, newItem] };
-      updateCampaign(updatedCampaign);
-    },
-    [getCampaignById, updateCampaign]
-  );
   
-  const value = { campaigns, getCampaignById, addCampaign, updateCampaign, deleteCampaign, addMediaItem };
+  const value = { campaigns, getCampaignById, addCampaign, updateCampaign, deleteCampaign };
 
   return (
     <CampaignsContext.Provider value={value}>

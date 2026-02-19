@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Slider } from "@/components/ui/slider";
 import type { Orientation } from '@/lib/types';
 
 const orientationOptions: { value: Orientation; label: string; icon: React.ElementType }[] = [
@@ -53,6 +54,25 @@ export default function SettingsPage() {
                   {opt.label}
                 </Button>
               )})}
+            </div>
+          </div>
+           <div className="space-y-4">
+            <h3 className="text-xl font-headline">Default Image Duration</h3>
+            <div className="rounded-md border p-6">
+                <div className="flex justify-between items-center mb-2">
+                <Label htmlFor="image-duration" className="text-base">Duration: {settings.defaultImageDuration} seconds</Label>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                Set the default display duration for newly added images.
+                </p>
+                <Slider
+                id="image-duration"
+                min={1}
+                max={60}
+                step={1}
+                value={[settings.defaultImageDuration]}
+                onValueChange={(value) => updateSettings({ defaultImageDuration: value[0] })}
+                />
             </div>
           </div>
           <div className="space-y-4">

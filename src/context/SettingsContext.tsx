@@ -9,6 +9,7 @@ const DEFAULTS: AppSettings = {
   orientation: 'landscape',
   autoStart: false,
   lastPlayedCampaignId: null,
+  defaultImageDuration: 10,
 };
 
 // The context shape
