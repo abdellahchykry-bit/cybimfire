@@ -32,14 +32,16 @@ export function useSettings() {
   }, []);
 
   const updateSettings = useCallback((newSettings: Partial<AppSettings>) => {
-    try {
-      const updated = { ...settings, ...newSettings };
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      setSettings(updated);
-    } catch (error) {
-      console.error('Error saving settings to localStorage', error);
-    }
-  }, [settings]);
+    setSettings(currentSettings => {
+      const updated = { ...currentSettings, ...newSettings };
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (error) {
+        console.error('Error saving settings to localStorage', error);
+      }
+      return updated;
+    });
+  }, []);
 
   return { settings, updateSettings };
 }
