@@ -1,0 +1,63 @@
+"use client";
+
+import Link from 'next/link';
+import Image from 'next/image';
+import { Play, Trash2, Image as ImageIcon } from 'lucide-react';
+import type { Campaign } from '@/lib/types';
+import { useCampaigns } from '@/hooks/use-campaigns';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
+interface CampaignCardProps {
+  campaign: Campaign;
+}
+
+export default function CampaignCard({ campaign }: CampaignCardProps) {
+  const { deleteCampaign } = useCampaigns();
+  const thumbnail = campaign.media.find(item => item.type === 'image')?.url || campaign.media[0]?.url;
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    deleteCampaign(campaign.id);
+  };
+
+  return (
+    <Link href={`/campaigns/${campaign.id}/edit`} passHref>
+      <Card className="flex flex-col h-full overflow-hidden transition-all duration-200 hover:border-primary focus-within:border-primary">
+        <CardHeader className="p-0">
+          <div className="relative aspect-video w-full bg-secondary">
+            {thumbnail ? (
+              <Image
+                src={thumbnail}
+                alt={campaign.name}
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <ImageIcon className="w-12 h-12 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 flex-1">
+          <CardTitle className="text-lg font-headline truncate">{campaign.name}</CardTitle>
+        </CardContent>
+        <CardFooter className="p-2 pt-0 flex justify-between">
+          <Link href={`/campaigns/${campaign.id}/play`} passHref>
+            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+              <Play />
+              <span className="sr-only">Play {campaign.name}</span>
+            </Button>
+          </Link>
+          <Button variant="destructive" size="icon" onClick={handleDelete}>
+            <Trash2 />
+            <span className="sr-only">Delete {campaign.name}</span>
+          </Button>
+        </CardFooter>
+      </Card>
+    </Link>
+  );
+}

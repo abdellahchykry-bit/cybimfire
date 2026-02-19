@@ -1,0 +1,169 @@
+"use client";
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
+import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Plus, Play, Image as ImageIcon, Video } from 'lucide-react';
+import { useCampaigns } from '@/hooks/use-campaigns';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import type { MediaItem } from '@/lib/types';
+
+const DURATION_OPTIONS = [5, 10, 15, 20, 30, 60];
+
+export default function CampaignEditorPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const { getCampaignById, updateCampaign, deleteCampaign, addMediaItem } = useCampaigns();
+  const [campaign, setCampaign] = useState(getCampaignById(params.id));
+  const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const updatedCampaign = getCampaignById(params.id);
+    if (!updatedCampaign) {
+      router.push('/');
+    } else {
+      setCampaign(updatedCampaign);
+    }
+  }, [params.id, getCampaignById, router]);
+
+  if (!campaign) {
+    return <div className="flex items-center justify-center min-h-screen">Loading campaign...</div>;
+  }
+  
+  const selectedMedia = campaign.media.find(m => m.id === selectedMediaId);
+
+  const handleMove = (index: number, direction: 'up' | 'down') => {
+    const newMedia = [...campaign.media];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newMedia.length) return;
+    [newMedia[index], newMedia[targetIndex]] = [newMedia[targetIndex], newMedia[index]];
+    const updatedCampaign = { ...campaign, media: newMedia };
+    updateCampaign(updatedCampaign);
+    setCampaign(updatedCampaign);
+  };
+
+  const handleDelete = (mediaId: string) => {
+    const newMedia = campaign.media.filter(m => m.id !== mediaId);
+    const updatedCampaign = { ...campaign, media: newMedia };
+    updateCampaign(updatedCampaign);
+    setCampaign(updatedCampaign);
+    if (selectedMediaId === mediaId) {
+      setSelectedMediaId(null);
+    }
+  };
+  
+  const handleDurationChange = (duration: string) => {
+    if (!selectedMediaId) return;
+    const newMedia = campaign.media.map(m => m.id === selectedMediaId ? { ...m, duration: parseInt(duration) } : m);
+    const updatedCampaign = { ...campaign, media: newMedia };
+    updateCampaign(updatedCampaign);
+    setCampaign(updatedCampaign);
+  }
+
+  const handleAddMedia = (type: 'image' | 'video') => {
+    addMediaItem(campaign.id, type);
+    // The hook updates the state, which will be reflected via useEffect
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen p-8">
+      <header className="flex justify-between items-center mb-8">
+        <div className="flex items-center gap-4">
+          <Link href="/" passHref>
+            <Button variant="outline" size="icon" className="h-12 w-12">
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-headline text-primary">{campaign.name}</h1>
+            <p className="text-muted-foreground">Campaign Editor</p>
+          </div>
+        </div>
+        <Link href={`/campaigns/${campaign.id}/play`} passHref>
+          <Button size="lg" className="h-12 text-lg">
+            <Play className="mr-2 h-6 w-6" />
+            Play
+          </Button>
+        </Link>
+      </header>
+
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Media Playlist</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-2">
+              {campaign.media.length === 0 && <p className="text-muted-foreground text-center py-8">No media items. Add some from the control panel.</p>}
+              {campaign.media.map((item, index) => (
+                <div key={item.id} 
+                  tabIndex={0}
+                  onFocus={() => setSelectedMediaId(item.id)}
+                  onClick={() => setSelectedMediaId(item.id)}
+                  className={`flex items-center gap-4 p-2 rounded-lg border-2 ${selectedMediaId === item.id ? 'border-primary' : 'border-transparent'} hover:bg-secondary/50 focus:bg-secondary/50 focus:outline-none`}>
+                  <div className="w-24 h-16 bg-secondary rounded-md overflow-hidden relative flex-shrink-0">
+                    {item.type === 'image' && <Image src={item.url} alt="thumbnail" layout="fill" objectFit="cover" unoptimized/>}
+                    {item.type === 'video' && <div className="flex items-center justify-center h-full"><Video className="text-muted-foreground"/></div>}
+                  </div>
+                  <div className="flex-1 truncate">
+                    <p className="font-medium">{`Item ${index + 1}`}</p>
+                    <p className="text-sm text-muted-foreground truncate">{item.url}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" disabled={index === 0} onClick={() => handleMove(index, 'up')}><ArrowUp /></Button>
+                    <Button variant="ghost" size="icon" disabled={index === campaign.media.length - 1} onClick={() => handleMove(index, 'down')}><ArrowDown /></Button>
+                    <Button variant="destructive" size="icon" onClick={() => handleDelete(item.id)}><Trash2 /></Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Controls</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <h3 className="font-semibold">Add Media</h3>
+              <div className="flex gap-2">
+                <Button className="flex-1" onClick={() => handleAddMedia('image')}><ImageIcon className="mr-2"/> Add Image</Button>
+                <Button className="flex-1" onClick={() => handleAddMedia('video')}><Video className="mr-2"/> Add Video</Button>
+              </div>
+            </div>
+
+            {selectedMedia && selectedMedia.type === 'image' && (
+              <div className="space-y-3">
+                <h3 className="font-semibold">Image Duration</h3>
+                <RadioGroup value={String(selectedMedia.duration)} onValueChange={handleDurationChange} className="grid grid-cols-3 gap-2">
+                  {DURATION_OPTIONS.map(d => (
+                    <div key={d}>
+                      <RadioGroupItem value={String(d)} id={`d-${d}`} className="peer sr-only" />
+                      <Label htmlFor={`d-${d}`} className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                        {d}s
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
+             {selectedMedia && selectedMedia.type === 'video' && (
+              <div className="text-muted-foreground p-4 border border-dashed rounded-md">
+                Video duration is determined by the video file itself.
+              </div>
+            )}
+            {!selectedMediaId && (
+                <div className="text-muted-foreground p-4 border border-dashed rounded-md">
+                  Select a media item from the playlist to edit its properties.
+                </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

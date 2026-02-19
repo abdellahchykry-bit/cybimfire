@@ -1,3 +1,46 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "1",
+      "description": "Abstract pink and blue",
+      "imageUrl": "https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxhYnN0cmFjdHxlbnwwfHx8fDE3NzE0MzUzNzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract"
+    },
+    {
+      "id": "2",
+      "description": "City at night",
+      "imageUrl": "https://images.unsplash.com/photo-1525935944571-4e99237764c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2l0eSUyMG5pZ2h0fGVufDB8fHx8MTc3MTQzMzYwN3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "city night"
+    },
+    {
+      "id": "3",
+      "description": "Mountain landscape",
+      "imageUrl": "https://images.unsplash.com/photo-1612441804231-77a36b284856?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtb3VudGFpbiUyMGxhbmRzY2FwZXxlbnwwfHx8fDE3NzE0NDQxMzJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mountain landscape"
+    },
+    {
+      "id": "4",
+      "description": "Forest path",
+      "imageUrl": "https://images.unsplash.com/photo-1598454981031-9c59c2d1a5c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Zm9yZXN0JTIwcGF0aHxlbnwwfHx8fDE3NzE0MDg4NTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "forest path"
+    },
+    {
+      "id": "5",
+      "description": "Ocean waves",
+      "imageUrl": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxvY2VhbiUyMHdhdmVzfGVufDB8fHx8MTc3MTQyMTAxNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "ocean waves"
+    },
+    {
+      "id": "6",
+      "description": "Modern architecture",
+      "imageUrl": "https://images.unsplash.com/photo-1559458049-9d62fceeb52b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8bW9kZXJuJTIwYXJjaGl0ZWN0dXJlfGVufDB8fHx8MTc3MTM4NjAwMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "modern architecture"
+    },
+    {
+      "id": "7",
+      "description": "Colorful spices",
+      "imageUrl": "https://images.unsplash.com/photo-1769034283546-96ab6352ba45?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxjb2xvcmZ1bCUyMHNwaWNlc3xlbnwwfHx8fDE3NzEzOTQ2Mjl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "colorful spices"
+    }
+  ]
 }
