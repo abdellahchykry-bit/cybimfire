@@ -12,7 +12,7 @@ export default function PlayPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { getCampaignById } = useCampaigns();
+  const { getCampaignById, loaded } = useCampaigns();
   const { settings, updateSettings } = useSettings();
   
   const campaign = getCampaignById(id);
@@ -24,10 +24,10 @@ export default function PlayPage() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (campaign) {
+    if (loaded && campaign) {
       updateSettings({ lastPlayedCampaignId: id });
     }
-  }, [id, campaign, updateSettings]);
+  }, [id, loaded, campaign, updateSettings]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -64,6 +64,14 @@ export default function PlayPage() {
     goToNext();
   };
   
+  if (!loaded) {
+    return (
+        <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
+            <p>Loading Campaign...</p>
+        </div>
+    );
+  }
+  
   const currentItem = campaign?.media[currentIndex];
 
   const orientationClasses = {
@@ -74,7 +82,6 @@ export default function PlayPage() {
   };
   
   if (!campaign) {
-    // campaigns are loaded but this one doesn't exist.
     return (
         <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
             <p>Campaign not found.</p>

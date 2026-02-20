@@ -16,7 +16,7 @@ export default function CampaignEditorPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { getCampaignById, updateCampaign, deleteCampaign } = useCampaigns();
+  const { getCampaignById, updateCampaign, deleteCampaign, loaded } = useCampaigns();
   const { settings } = useSettings();
   const { toast } = useToast();
   
@@ -40,22 +40,22 @@ export default function CampaignEditorPage() {
   }, [id, deleteCampaign]);
 
   useEffect(() => {
-    if (!campaign) {
+    if (loaded && !campaign) {
       router.push('/');
       return;
     }
     
-    if (campaign.media.length > 0 && !selectedMediaId) {
+    if (campaign?.media.length > 0 && !selectedMediaId) {
       setSelectedMediaId(campaign.media[0].id);
     }
     
-    if (selectedMediaId && !campaign.media.find(m => m.id === selectedMediaId)) {
+    if (selectedMediaId && campaign && !campaign.media.find(m => m.id === selectedMediaId)) {
         setSelectedMediaId(campaign.media.length > 0 ? campaign.media[0].id : null)
     }
 
-  }, [id, campaign, router, selectedMediaId]);
-
-  if (!campaign) {
+  }, [id, campaign, router, selectedMediaId, loaded]);
+  
+  if (!loaded || !campaign) {
     return <div className="flex items-center justify-center min-h-screen">Loading campaign...</div>;
   }
   

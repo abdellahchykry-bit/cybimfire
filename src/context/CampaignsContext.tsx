@@ -8,6 +8,7 @@ const STORAGE_KEY = 'cybim_campaigns';
 // The context shape
 interface CampaignsContextType {
   campaigns: Campaign[];
+  loaded: boolean;
   getCampaignById: (id: string) => Campaign | undefined;
   addCampaign: () => Campaign;
   updateCampaign: (updatedCampaign: Campaign) => void;
@@ -34,19 +35,11 @@ const getInitialCampaigns = (): Campaign[] => {
 // The provider component
 export function CampaignsProvider({ children }: { children: ReactNode }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setCampaigns(getInitialCampaigns());
-  }, []);
-
-  const saveCampaigns = useCallback((updatedCampaigns: Campaign[]) => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCampaigns));
-      setCampaigns(updatedCampaigns);
-    } catch (error) {
-      console.error('Error saving campaigns to localStorage', error);
-      throw error; // Re-throw the error to be handled by the component
-    }
+    setLoaded(true);
   }, []);
 
   const getCampaignById = useCallback(
@@ -71,29 +64,52 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       name: newCampaignName,
       media: [],
     };
-    saveCampaigns([...campaigns, newCampaign]);
+    const updatedCampaigns = [...campaigns, newCampaign];
+    try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCampaigns));
+        setCampaigns(updatedCampaigns);
+    } catch(e) {
+        console.error('Error saving campaigns to localStorage', e);
+        throw e;
+    }
     return newCampaign;
-  }, [campaigns, saveCampaigns]);
+  }, [campaigns]);
 
   const updateCampaign = useCallback(
     (updatedCampaign: Campaign) => {
-      const newCampaigns = campaigns.map((c) =>
-        c.id === updatedCampaign.id ? updatedCampaign : c
-      );
-      saveCampaigns(newCampaigns);
+      setCampaigns(current => {
+        const newCampaigns = current.map((c) =>
+          c.id === updatedCampaign.id ? updatedCampaign : c
+        );
+        try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newCampaigns));
+        } catch(e) {
+            console.error('Error saving campaigns to localStorage', e);
+            throw e;
+        }
+        return newCampaigns;
+      });
     },
-    [campaigns, saveCampaigns]
+    []
   );
 
   const deleteCampaign = useCallback(
     (campaignId: string) => {
-      const newCampaigns = campaigns.filter((c) => c.id !== campaignId);
-      saveCampaigns(newCampaigns);
+      setCampaigns(current => {
+          const newCampaigns = current.filter((c) => c.id !== campaignId);
+          try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newCampaigns));
+          } catch(e) {
+            console.error('Error saving campaigns to localStorage', e);
+            throw e;
+          }
+          return newCampaigns;
+      });
     },
-    [campaigns, saveCampaigns]
+    []
   );
   
-  const value = { campaigns, getCampaignById, addCampaign, updateCampaign, deleteCampaign };
+  const value = { campaigns, loaded, getCampaignById, addCampaign, updateCampaign, deleteCampaign };
 
   return (
     <CampaignsContext.Provider value={value}>
