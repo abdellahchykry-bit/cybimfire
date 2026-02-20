@@ -12,7 +12,7 @@ export default function PlayPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { campaigns, getCampaignById } = useCampaigns();
+  const { getCampaignById } = useCampaigns();
   const { settings, updateSettings } = useSettings();
   
   const campaign = getCampaignById(id);
@@ -70,20 +70,17 @@ export default function PlayPage() {
     'landscape': 'rotate-0',
     'reverse-landscape': 'rotate-180',
     'portrait': 'rotate-90',
-    'reverse-portrait': 'rotate-[-90deg]',
+    'reverse-portrait': '-rotate-90',
   };
   
   if (!campaign) {
-    if (campaigns.length > 0) {
-      // campaigns are loaded but this one doesn't exist.
-      return (
-          <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
-              <p>Campaign not found.</p>
-              <button onClick={() => router.push('/')} className="px-4 py-2 border rounded">Go Home</button>
-          </div>
-      );
-    }
-    return <div className="bg-black flex items-center justify-center h-screen w-screen text-white">Loading...</div>;
+    // campaigns are loaded but this one doesn't exist.
+    return (
+        <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
+            <p>Campaign not found.</p>
+            <button onClick={() => router.push('/')} className="px-4 py-2 border rounded">Go Home</button>
+        </div>
+    );
   }
   
   if (campaign.media.length === 0) {
