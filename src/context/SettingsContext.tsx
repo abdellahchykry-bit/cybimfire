@@ -8,6 +8,7 @@ const STORAGE_KEY = 'cybim_settings';
 const DEFAULTS: AppSettings = {
   orientation: 'landscape',
   autoStart: false,
+  startOnBoot: false,
   lastPlayedCampaignId: null,
   defaultImageDuration: 10,
 };

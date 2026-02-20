@@ -4,23 +4,19 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Play, Image as ImageIcon, Video } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Play, Image as ImageIcon, Video, Upload } from 'lucide-react';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import type { Campaign, MediaItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-
-const DURATION_OPTIONS = [5, 10, 15, 20, 30, 60];
 
 export default function CampaignEditorPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { campaigns, getCampaignById, updateCampaign } = useCampaigns();
+  const { getCampaignById, updateCampaign, deleteCampaign } = useCampaigns();
   const { settings } = useSettings();
   const { toast } = useToast();
   
@@ -28,27 +24,36 @@ export default function CampaignEditorPage() {
   
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
   
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+  const campaignRef = useRef(campaign);
 
   useEffect(() => {
-    // Redirect if campaign not found after campaigns load
-    if (campaigns.length > 0 && !campaign) {
+    campaignRef.current = campaign;
+  }, [campaign]);
+
+  useEffect(() => {
+    return () => {
+      if (campaignRef.current && campaignRef.current.media.length === 0) {
+        deleteCampaign(id);
+      }
+    };
+  }, [id, deleteCampaign]);
+
+  useEffect(() => {
+    if (!campaign) {
       router.push('/');
       return;
     }
     
-    // Auto-select first media item
-    if (campaign && campaign.media.length > 0 && !selectedMediaId) {
+    if (campaign.media.length > 0 && !selectedMediaId) {
       setSelectedMediaId(campaign.media[0].id);
     }
     
-    // If the selected media item no longer exists, update selection
-    if (campaign && selectedMediaId && !campaign.media.find(m => m.id === selectedMediaId)) {
+    if (selectedMediaId && !campaign.media.find(m => m.id === selectedMediaId)) {
         setSelectedMediaId(campaign.media.length > 0 ? campaign.media[0].id : null)
     }
 
-  }, [id, campaign, campaigns, router, selectedMediaId]);
+  }, [id, campaign, router, selectedMediaId]);
 
   if (!campaign) {
     return <div className="flex items-center justify-center min-h-screen">Loading campaign...</div>;
@@ -57,7 +62,6 @@ export default function CampaignEditorPage() {
   const selectedMedia = campaign.media.find(m => m.id === selectedMediaId);
 
   const handleMove = (index: number, direction: 'up' | 'down') => {
-    if (!campaign) return;
     const newMedia = [...campaign.media];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newMedia.length) return;
@@ -67,77 +71,78 @@ export default function CampaignEditorPage() {
   };
 
   const handleDelete = (mediaId: string) => {
-    if (!campaign) return;
     const newMedia = campaign.media.filter(m => m.id !== mediaId);
     const updatedCampaign = { ...campaign, media: newMedia };
     updateCampaign(updatedCampaign);
   };
   
-  const handleDurationChange = (duration: string) => {
-    if (!selectedMediaId || !campaign) return;
-    const newMedia = campaign.media.map(m => m.id === selectedMediaId ? { ...m, duration: parseInt(duration) } : m);
-    const updatedCampaign = { ...campaign, media: newMedia };
-    updateCampaign(updatedCampaign);
-  }
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0 || !campaign) return;
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
-    const file = event.target.files?.[0];
-    if (!file || !campaign) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const url = e.target?.result as string;
-
-        const handleUpdate = (newCampaign: Campaign) => {
-          try {
-            updateCampaign(newCampaign);
-          } catch (error) {
-            if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.code === 22)) {
-              toast({
-                variant: 'destructive',
-                title: 'Storage Limit Reached',
-                description: "The file is too large. Your browser's storage is full. Please remove other media items or use smaller files.",
-              });
-            } else {
-              console.error(error);
-              toast({
-                variant: 'destructive',
-                title: 'Upload Failed',
-                description: 'An unexpected error occurred while saving the media.',
-              });
-            }
-          }
-        };
-
-        if (type === 'image') {
-            const newItem: MediaItem = {
-                id: crypto.randomUUID(),
-                type: 'image',
-                url,
-                duration: settings.defaultImageDuration,
-            };
-            const updatedCampaign = { ...campaign, media: [...campaign.media, newItem] };
-            handleUpdate(updatedCampaign);
-        } else { // video
+    const newMediaPromises = Array.from(files).map(file => {
+      return new Promise<MediaItem | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const url = e.target?.result as string;
+          if (file.type.startsWith('image/')) {
+            resolve({
+              id: crypto.randomUUID(),
+              type: 'image',
+              url,
+              duration: settings.defaultImageDuration,
+            });
+          } else if (file.type.startsWith('video/')) {
             const videoElement = document.createElement('video');
             videoElement.preload = 'metadata';
             videoElement.onloadedmetadata = () => {
-                const newItem: MediaItem = {
-                    id: crypto.randomUUID(),
-                    type: 'video',
-                    url,
-                    duration: videoElement.duration,
-                };
-                const updatedCampaign = { ...campaign, media: [...campaign.media, newItem] };
-                handleUpdate(updatedCampaign);
+              window.URL.revokeObjectURL(videoElement.src);
+              resolve({
+                id: crypto.randomUUID(),
+                type: 'video',
+                url,
+                duration: videoElement.duration,
+              });
             };
-            videoElement.src = url;
-        }
-    };
-    reader.readAsDataURL(file);
+            videoElement.onerror = () => {
+                window.URL.revokeObjectURL(videoElement.src);
+                resolve(null)
+            };
+            videoElement.src = URL.createObjectURL(file);
+          } else {
+            resolve(null);
+          }
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    try {
+      const newMediaItems = (await Promise.all(newMediaPromises)).filter((item): item is MediaItem => item !== null);
+      if (newMediaItems.length > 0) {
+        const updatedCampaign = { ...campaign, media: [...campaign.media, ...newMediaItems] };
+        updateCampaign(updatedCampaign);
+      }
+    } catch (error) {
+      if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.code === 22)) {
+        toast({
+          variant: 'destructive',
+          title: 'Storage Limit Reached',
+          description: "Some files might be too large. Your browser's storage is full.",
+        });
+      } else {
+        console.error(error);
+        toast({
+          variant: 'destructive',
+          title: 'Upload Failed',
+          description: 'An unexpected error occurred while saving media.',
+        });
+      }
+    }
     
     if(event.target) {
-        event.target.value = '';
+      event.target.value = '';
     }
   };
 
@@ -156,7 +161,7 @@ export default function CampaignEditorPage() {
           </div>
         </div>
         <Link href={`/campaigns/${campaign.id}/play`} passHref>
-          <Button size="lg" className="h-12 text-lg">
+          <Button size="lg" className="h-12 text-lg" disabled={campaign.media.length === 0}>
             <Play className="mr-2 h-6 w-6" />
             Play
           </Button>
@@ -183,7 +188,7 @@ export default function CampaignEditorPage() {
                   </div>
                   <div className="flex-1 truncate">
                     <p className="font-medium">{`Item ${index + 1}`}</p>
-                    <p className="text-sm text-muted-foreground truncate">{item.url.startsWith('data:') ? `Uploaded ${item.type}` : item.url}</p>
+                    <p className="text-sm text-muted-foreground capitalize">{item.type}</p>
                   </div>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" disabled={index === 0} onClick={() => handleMove(index, 'up')}><ArrowUp /></Button>
@@ -203,37 +208,23 @@ export default function CampaignEditorPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <h3 className="font-semibold">Add Media</h3>
-              <input type="file" ref={imageInputRef} onChange={(e) => handleFileSelect(e, 'image')} accept="image/*" style={{ display: 'none' }} />
-              <input type="file" ref={videoInputRef} onChange={(e) => handleFileSelect(e, 'video')} accept="video/*" style={{ display: 'none' }} />
-              <div className="flex gap-2">
-                <Button className="flex-1" onClick={() => imageInputRef.current?.click()}><ImageIcon className="mr-2"/> Upload Image</Button>
-                <Button className="flex-1" onClick={() => videoInputRef.current?.click()}><Video className="mr-2"/> Upload Video</Button>
-              </div>
+              <input type="file" ref={mediaInputRef} onChange={handleFileSelect} accept="image/*,video/*" multiple style={{ display: 'none' }} />
+              <Button className="w-full" onClick={() => mediaInputRef.current?.click()}><Upload className="mr-2"/> Upload Media</Button>
             </div>
 
-            {selectedMedia && selectedMedia.type === 'image' && (
-              <div className="space-y-3">
-                <h3 className="font-semibold">Image Duration</h3>
-                <RadioGroup value={String(selectedMedia.duration)} onValueChange={handleDurationChange} className="grid grid-cols-3 gap-2">
-                  {DURATION_OPTIONS.map(d => (
-                    <div key={d}>
-                      <RadioGroupItem value={String(d)} id={`d-${d}`} className="peer sr-only" />
-                      <Label htmlFor={`d-${d}`} className="flex items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                        {d}s
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
+            {selectedMedia?.type === 'image' && (
+              <div className="text-muted-foreground p-4 border border-dashed rounded-md">
+                Image duration is set to the default value from settings. ({selectedMedia.duration}s)
               </div>
             )}
-             {selectedMedia && selectedMedia.type === 'video' && (
+             {selectedMedia?.type === 'video' && (
               <div className="text-muted-foreground p-4 border border-dashed rounded-md">
                 Video duration is determined by the video file itself. ({selectedMedia.duration.toFixed(1)}s)
               </div>
             )}
             {!selectedMediaId && (
                 <div className="text-muted-foreground p-4 border border-dashed rounded-md">
-                  Select a media item from the playlist to edit its properties.
+                  Select a media item from the playlist to see its properties.
                 </div>
             )}
           </CardContent>

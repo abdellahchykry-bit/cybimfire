@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Settings, Play } from 'lucide-react';
+import { Plus, Settings, Play, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import CybimLogo from '@/components/icons/CybimLogo';
@@ -33,17 +33,22 @@ export default function Home() {
     <div className="flex flex-col min-h-screen p-8 lg:p-12">
       <header className="flex justify-between items-start mb-12">
         <div className="flex items-center gap-4">
-          <CybimLogo className="h-12 w-12" />
+          <CybimLogo className="h-12 w-12 text-primary" />
           <div>
             <h1 className="text-4xl font-headline text-primary">CYBIM</h1>
-            <p className="text-lg text-muted-foreground">Offline Signage Player</p>
+            <p className="text-lg text-foreground">Offline Signage Player</p>
           </div>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2">
           <Clock />
+          <Link href="/about" passHref>
+            <Button variant="ghost" size="icon" className="w-12 h-12">
+              <Info className="w-7 h-7" />
+            </Button>
+          </Link>
           <Link href="/settings" passHref>
             <Button variant="ghost" size="icon" className="w-12 h-12">
-              <Settings className="w-8 h-8" />
+              <Settings className="w-7 h-7" />
             </Button>
           </Link>
         </div>

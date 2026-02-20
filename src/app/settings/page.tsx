@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { ArrowLeft, RotateCcw, RotateCw, ScreenShare, ToggleLeft, ToggleRight } from 'lucide-react';
+import { ArrowLeft, Power } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Slider } from "@/components/ui/slider";
 import type { Orientation } from '@/lib/types';
+import { ScreenShare } from 'lucide-react';
 
 const orientationOptions: { value: Orientation; label: string; icon: React.ElementType }[] = [
   { value: 'landscape', label: 'Landscape', icon: ScreenShare },
@@ -78,6 +79,7 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <h3 className="text-xl font-headline">Auto Start</h3>
             <div className="flex items-center space-x-4 rounded-md border p-4">
+              <Power className="w-6 h-6 text-muted-foreground" />
               <div className="flex-1 space-y-1">
                 <p className="text-lg font-medium">
                   Auto Start on Launch
@@ -91,6 +93,23 @@ export default function SettingsPage() {
                 checked={settings.autoStart}
                 onCheckedChange={(checked) => updateSettings({ autoStart: checked })}
                 aria-label="Toggle auto start"
+              />
+            </div>
+            <div className="flex items-center space-x-4 rounded-md border p-4">
+              <Power className="w-6 h-6 text-muted-foreground" />
+              <div className="flex-1 space-y-1">
+                <p className="text-lg font-medium">
+                  Start on Boot (Boot Receiver)
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  If enabled, the app will attempt to launch on system startup. (Requires device support)
+                </p>
+              </div>
+              <Switch
+                id="start-on-boot"
+                checked={settings.startOnBoot}
+                onCheckedChange={(checked) => updateSettings({ startOnBoot: checked })}
+                aria-label="Toggle start on boot"
               />
             </div>
           </div>
