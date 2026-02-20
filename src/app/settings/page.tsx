@@ -44,7 +44,7 @@ export default function SettingsPage() {
             <h3 className="text-xl font-headline">Screen Orientation</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {orientationOptions.map((opt, i) => {
-                const Icon = i === 1 ? (props: any) => <ScreenShare {...props} style={{ transform: 'scaleX(-1)'}}/> : i === 2 ? (props: any) => <ScreenShare {...props} style={{ transform: 'rotate(90deg)'}}/> : i === 3 ? (props: any) => <ScreenShare {...props} style={{ transform: 'rotate(-90deg) scaleY(-1)'}}/> : opt.icon;
+                const Icon = i === 1 ? (props: any) => <ScreenShare {...props} style={{ transform: 'rotate(180deg)'}}/> : i === 2 ? (props: any) => <ScreenShare {...props} style={{ transform: 'rotate(90deg)'}}/> : i === 3 ? (props: any) => <ScreenShare {...props} style={{ transform: 'rotate(-90deg)'}}/> : opt.icon;
                 return (
                 <Button
                   key={opt.value}

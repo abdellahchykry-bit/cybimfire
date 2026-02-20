@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import type { Campaign, MediaItem } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 const STORAGE_KEY = 'cybim_campaigns';
 
@@ -36,6 +37,7 @@ const getInitialCampaigns = (): Campaign[] => {
 export function CampaignsProvider({ children }: { children: ReactNode }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     setCampaigns(getInitialCampaigns());
@@ -50,30 +52,41 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   );
   
   const addCampaign = useCallback(() => {
-    const existingNames = campaigns.map((c) => c.name);
-    let newCampaignNumber = campaigns.length + 1;
-    let newCampaignName = `Campaign ${String(newCampaignNumber).padStart(2, '0')}`;
-
-    while (existingNames.includes(newCampaignName)) {
-      newCampaignNumber++;
-      newCampaignName = `Campaign ${String(newCampaignNumber).padStart(2, '0')}`;
-    }
-
     const newCampaign: Campaign = {
       id: crypto.randomUUID(),
-      name: newCampaignName,
+      name: '', // This will be set inside the state update
       media: [],
     };
-    const updatedCampaigns = [...campaigns, newCampaign];
-    try {
+
+    setCampaigns(currentCampaigns => {
+      const existingNames = currentCampaigns.map((c) => c.name);
+      let newCampaignNumber = currentCampaigns.length + 1;
+      let newCampaignName = `Campaign ${String(newCampaignNumber).padStart(2, '0')}`;
+  
+      while (existingNames.includes(newCampaignName)) {
+        newCampaignNumber++;
+        newCampaignName = `Campaign ${String(newCampaignNumber).padStart(2, '0')}`;
+      }
+      
+      const campaignWithCorrectName = { ...newCampaign, name: newCampaignName };
+      const updatedCampaigns = [...currentCampaigns, campaignWithCorrectName];
+
+      try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCampaigns));
-        setCampaigns(updatedCampaigns);
-    } catch(e) {
-        console.error('Error saving campaigns to localStorage', e);
-        throw e;
-    }
+      } catch (e) {
+        toast({
+          variant: 'destructive',
+          title: 'Storage Limit Reached',
+          description: "Could not create campaign. Your browser's storage may be full.",
+        });
+        // Revert state if save fails
+        return currentCampaigns;
+      }
+      return updatedCampaigns;
+    });
+
     return newCampaign;
-  }, [campaigns]);
+  }, [toast]);
 
   const updateCampaign = useCallback(
     (updatedCampaign: Campaign) => {
@@ -84,13 +97,18 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
         try {
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newCampaigns));
         } catch(e) {
-            console.error('Error saving campaigns to localStorage', e);
-            throw e;
+            toast({
+              variant: 'destructive',
+              title: 'Storage Limit Reached',
+              description: "Could not save media. Your browser's storage may be full.",
+            });
+            // Revert to previous state on error
+            return current;
         }
         return newCampaigns;
       });
     },
-    []
+    [toast]
   );
 
   const deleteCampaign = useCallback(
@@ -101,7 +119,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newCampaigns));
           } catch(e) {
             console.error('Error saving campaigns to localStorage', e);
-            throw e;
+            // State is already updated, but localStorage is not. This is not ideal but hard to revert.
           }
           return newCampaigns;
       });

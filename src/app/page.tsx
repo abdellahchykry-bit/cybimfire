@@ -38,14 +38,14 @@ export default function Home() {
         <div className="flex items-center gap-4">
           <Clock />
           <div className="flex items-center">
-            <Link href="/settings" passHref>
-              <Button variant="ghost" size="icon" className="w-12 h-12">
-                <Settings className="w-7 h-7" />
-              </Button>
-            </Link>
             <Link href="/about" passHref>
               <Button variant="ghost" size="icon" className="w-12 h-12">
                 <Info className="w-7 h-7" />
+              </Button>
+            </Link>
+            <Link href="/settings" passHref>
+              <Button variant="ghost" size="icon" className="w-12 h-12">
+                <Settings className="w-7 h-7" />
               </Button>
             </Link>
           </div>

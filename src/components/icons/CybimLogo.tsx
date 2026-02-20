@@ -9,11 +9,11 @@ const CybimLogo = (props: SVGProps<SVGSVGElement>) => (
             </linearGradient>
         </defs>
         {/* Screen */}
-        <rect x="2" y="4" width="20" height="14" rx="3" stroke="url(#cybim-gradient)" strokeWidth="1.5"/>
+        <rect x="2" y="3" width="20" height="15" rx="4" stroke="url(#cybim-gradient)" strokeWidth="2.5"/>
         {/* Stand */}
-        <path d="M9 18L15 18" stroke="url(#cybim-gradient)" strokeWidth="1.5" strokeLinecap="round"/>
+        <rect x="7" y="19" width="10" height="2" rx="1" fill="url(#cybim-gradient)"/>
         {/* Play Icon */}
-        <path d="M10 9L15 12L10 15V9Z" fill="url(#cybim-gradient)"/>
+        <path d="M10.5 8.5L15.5 11.5L10.5 14.5V8.5Z" fill="url(#cybim-gradient)"/>
     </svg>
 );
 
