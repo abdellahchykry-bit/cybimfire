@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Play, Image as ImageIcon, Video, Upload } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Play, Video, Upload } from 'lucide-react';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
@@ -40,20 +40,29 @@ export default function CampaignEditorPage() {
   }, [id, deleteCampaign]);
 
   useEffect(() => {
-    if (loaded && !campaign) {
-      router.push('/');
-      return;
-    }
-    
-    if (campaign?.media.length > 0 && !selectedMediaId) {
-      setSelectedMediaId(campaign.media[0].id);
-    }
-    
-    if (selectedMediaId && campaign && !campaign.media.find(m => m.id === selectedMediaId)) {
-        setSelectedMediaId(campaign.media.length > 0 ? campaign.media[0].id : null)
-    }
+    if (loaded) {
+      if (!campaign) {
+        // If campaign is not found, it could be a new campaign being created (race condition)
+        // or an invalid ID. We wait a bit to see if it appears.
+        const timer = setTimeout(() => {
+          if (!getCampaignById(id)) {
+            router.push('/');
+          }
+        }, 1500); // Wait 1.5s
 
-  }, [id, campaign, router, selectedMediaId, loaded]);
+        return () => clearTimeout(timer);
+      } else {
+        // Campaign found, manage selected media
+        if (campaign.media.length > 0 && !selectedMediaId) {
+          setSelectedMediaId(campaign.media[0].id);
+        }
+        
+        if (selectedMediaId && !campaign.media.find(m => m.id === selectedMediaId)) {
+            setSelectedMediaId(campaign.media.length > 0 ? campaign.media[0].id : null)
+        }
+      }
+    }
+  }, [id, campaign, loaded, selectedMediaId, router, getCampaignById]);
   
   if (!loaded || !campaign) {
     return <div className="flex items-center justify-center min-h-screen">Loading campaign...</div>;
