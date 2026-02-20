@@ -11,7 +11,7 @@ export default function AboutPage() {
     <div className="flex flex-col min-h-screen p-8 lg:p-12">
       <header className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
-          <CybimLogo className="h-12 w-12 text-primary" />
+          <CybimLogo className="h-12 w-12" />
           <h1 className="text-4xl font-headline text-primary">CYBIM</h1>
         </div>
         <Link href="/" passHref>
