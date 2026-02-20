@@ -45,6 +45,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       setCampaigns(updatedCampaigns);
     } catch (error) {
       console.error('Error saving campaigns to localStorage', error);
+      throw error; // Re-throw the error to be handled by the component
     }
   }, []);
 

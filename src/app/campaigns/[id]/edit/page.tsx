@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import type { Campaign, MediaItem } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 const DURATION_OPTIONS = [5, 10, 15, 20, 30, 60];
 
@@ -21,6 +22,7 @@ export default function CampaignEditorPage() {
   const router = useRouter();
   const { campaigns, getCampaignById, updateCampaign } = useCampaigns();
   const { settings } = useSettings();
+  const { toast } = useToast();
   
   const campaign = getCampaignById(id);
   
@@ -86,6 +88,27 @@ export default function CampaignEditorPage() {
     reader.onload = (e) => {
         const url = e.target?.result as string;
 
+        const handleUpdate = (newCampaign: Campaign) => {
+          try {
+            updateCampaign(newCampaign);
+          } catch (error) {
+            if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.code === 22)) {
+              toast({
+                variant: 'destructive',
+                title: 'Storage Limit Reached',
+                description: "The file is too large. Your browser's storage is full. Please remove other media items or use smaller files.",
+              });
+            } else {
+              console.error(error);
+              toast({
+                variant: 'destructive',
+                title: 'Upload Failed',
+                description: 'An unexpected error occurred while saving the media.',
+              });
+            }
+          }
+        };
+
         if (type === 'image') {
             const newItem: MediaItem = {
                 id: crypto.randomUUID(),
@@ -94,7 +117,7 @@ export default function CampaignEditorPage() {
                 duration: settings.defaultImageDuration,
             };
             const updatedCampaign = { ...campaign, media: [...campaign.media, newItem] };
-            updateCampaign(updatedCampaign);
+            handleUpdate(updatedCampaign);
         } else { // video
             const videoElement = document.createElement('video');
             videoElement.preload = 'metadata';
@@ -106,7 +129,7 @@ export default function CampaignEditorPage() {
                     duration: videoElement.duration,
                 };
                 const updatedCampaign = { ...campaign, media: [...campaign.media, newItem] };
-                updateCampaign(updatedCampaign);
+                handleUpdate(updatedCampaign);
             };
             videoElement.src = url;
         }
