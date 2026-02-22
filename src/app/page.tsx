@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Settings, Play, Info, Film } from 'lucide-react';
@@ -12,8 +13,18 @@ import { useSettings } from '@/context/SettingsContext';
 
 export default function Home() {
   const router = useRouter();
-  const { campaigns, addCampaign, loaded } = useCampaigns();
-  const { settings } = useSettings();
+  const { campaigns, addCampaign, loaded: campaignsLoaded } = useCampaigns();
+  const { settings, loaded: settingsLoaded } = useSettings();
+
+  useEffect(() => {
+    const loaded = campaignsLoaded && settingsLoaded;
+    if (loaded && settings.autoStart && settings.lastPlayedCampaignId) {
+      const campaignExists = campaigns.some(c => c.id === settings.lastPlayedCampaignId);
+      if (campaignExists) {
+        router.replace(`/campaigns/${settings.lastPlayedCampaignId}/play`);
+      }
+    }
+  }, [campaignsLoaded, settingsLoaded, settings.autoStart, settings.lastPlayedCampaignId, campaigns, router]);
 
   const handleAddCampaign = async () => {
     const newCampaign = await addCampaign();
@@ -23,6 +34,7 @@ export default function Home() {
   };
 
   const playTargetId = settings.lastPlayedCampaignId ?? campaigns[0]?.id;
+  const loaded = campaignsLoaded && settingsLoaded;
 
   return (
     <div className="flex flex-col min-h-screen p-8 lg:p-12">

@@ -10,7 +10,8 @@ import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Campaign, MediaItem } from '@/lib/types';
-import { useToast } from '@/hooks/use-toast';
+
+const durationOptions = [5, 10, 15, 20, 30, 60];
 
 export default function CampaignEditorPage() {
   const params = useParams();
@@ -24,46 +25,46 @@ export default function CampaignEditorPage() {
   
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
-  // This ref is used to track the campaign for the cleanup effect,
-  // preventing it from re-running on every campaign state change.
   const campaignRef = useRef(campaign);
   useEffect(() => {
     campaignRef.current = campaign;
   }, [campaign]);
 
-  // Effect to delete empty campaigns on unmount.
   useEffect(() => {
     return () => {
-      // Use the ref to get the campaign state at the time of unmount.
       if (campaignRef.current && campaignRef.current.media.length === 0) {
-        // This is a fire-and-forget operation.
         deleteCampaign(id);
       }
     };
   }, [id, deleteCampaign]);
 
-  // Effect to find and set the current campaign from the context.
   useEffect(() => {
     if (loaded) {
       const foundCampaign = getCampaignById(id);
       if (foundCampaign) {
         setCampaign(foundCampaign);
       } else {
-        // If not found after context is loaded, it might be an invalid ID.
-        router.push('/');
+        // If not found after context is loaded, it might be a new campaign that hasn't populated yet.
+        // Wait a bit before deciding it's an invalid ID.
+        const timer = setTimeout(() => {
+          const retryCampaign = getCampaignById(id); // re-check
+          if (!retryCampaign) {
+            router.push('/');
+          } else {
+            setCampaign(retryCampaign);
+          }
+        }, 1000); // 1 sec should be enough
+        return () => clearTimeout(timer);
       }
     }
   }, [id, loaded, campaigns, getCampaignById, router]);
 
-  // Effect to manage the selected media item.
   useEffect(() => {
     if (campaign) {
-       // If there's no selected media, select the first one.
        if (campaign.media.length > 0 && !selectedMediaId) {
         setSelectedMediaId(campaign.media[0].id);
       }
       
-      // If the selected media was deleted, select the new first one or null.
       if (selectedMediaId && !campaign.media.find(m => m.id === selectedMediaId)) {
           setSelectedMediaId(campaign.media.length > 0 ? campaign.media[0].id : null)
       }
@@ -75,6 +76,15 @@ export default function CampaignEditorPage() {
   }
   
   const selectedMedia = campaign.media.find(m => m.id === selectedMediaId);
+
+  const handleUpdateMediaItem = (mediaId: string, updates: Partial<MediaItem>) => {
+    if (!campaign) return;
+    const newMedia = campaign.media.map(m => 
+        m.id === mediaId ? { ...m, ...updates } : m
+    );
+    const updatedCampaign = { ...campaign, media: newMedia };
+    updateCampaign(updatedCampaign);
+  };
 
   const handleMove = (index: number, direction: 'up' | 'down') => {
     if (!campaign) return;
@@ -128,7 +138,6 @@ export default function CampaignEditorPage() {
             };
             videoElement.src = URL.createObjectURL(file);
           } else {
-            // Unsupported file type
             resolve(null);
           }
         };
@@ -142,7 +151,7 @@ export default function CampaignEditorPage() {
     
     if (newMediaItems.length > 0) {
       const updatedCampaign = { ...campaign, media: [...campaign.media, ...newMediaItems] };
-      await updateCampaign(updatedCampaign); // This now handles its own errors/toasts
+      await updateCampaign(updatedCampaign);
     }
     
     if(event.target) {
@@ -217,8 +226,19 @@ export default function CampaignEditorPage() {
             </div>
 
             {selectedMedia?.type === 'image' && (
-              <div className="text-muted-foreground p-4 border border-dashed rounded-md">
-                Image duration is set to the default value from settings. ({selectedMedia.duration}s)
+              <div className="space-y-4">
+                <h3 className="font-semibold">Image Duration</h3>
+                <div className="flex flex-wrap gap-2">
+                  {durationOptions.map((duration) => (
+                    <Button
+                      key={duration}
+                      variant={selectedMedia.duration === duration ? 'default' : 'outline'}
+                      onClick={() => handleUpdateMediaItem(selectedMedia.id, { duration })}
+                    >
+                      {duration}s
+                    </Button>
+                  ))}
+                </div>
               </div>
             )}
              {selectedMedia?.type === 'video' && (

@@ -33,8 +33,22 @@
   }
   body {
     @apply bg-background text-foreground;
+    transition: transform 0.5s ease;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
   }
   *:focus-visible {
     @apply outline-none ring-4 ring-primary;
+  }
+
+  .orientation-reverse-landscape {
+    transform: rotate(180deg);
+  }
+  .orientation-portrait {
+    transform: rotate(90deg);
+  }
+  .orientation-reverse-portrait {
+    transform: rotate(-90deg);
   }
 }

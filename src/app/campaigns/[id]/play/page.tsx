@@ -5,7 +5,6 @@ import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
-import { cn } from '@/lib/utils';
 import type { Campaign } from '@/lib/types';
 
 export default function PlayPage() {
@@ -13,7 +12,7 @@ export default function PlayPage() {
   const id = params.id as string;
   const router = useRouter();
   const { getCampaignById, campaigns, loaded: campaignsLoaded } = useCampaigns();
-  const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
+  const { updateSettings, loaded: settingsLoaded } = useSettings();
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -87,13 +86,6 @@ export default function PlayPage() {
   
   const currentItem = campaign?.media[currentIndex];
 
-  const orientationClasses = {
-    'landscape': 'rotate-0',
-    'reverse-landscape': 'rotate-180',
-    'portrait': 'rotate-90',
-    'reverse-portrait': '-rotate-90',
-  };
-  
   if (campaign.media.length === 0) {
     return (
         <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
@@ -104,7 +96,7 @@ export default function PlayPage() {
   }
 
   return (
-    <div className={cn("fixed inset-0 bg-black flex items-center justify-center overflow-hidden", orientationClasses[settings.orientation] || 'rotate-0')}>
+    <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       {currentItem?.type === 'image' && (
         <Image
           key={currentItem.id}
