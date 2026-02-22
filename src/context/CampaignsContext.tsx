@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
-import type { Campaign, MediaItem } from '@/lib/types';
+import type { Campaign } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 const STORAGE_KEY = 'cybim_campaigns';
@@ -11,7 +11,7 @@ interface CampaignsContextType {
   campaigns: Campaign[];
   loaded: boolean;
   getCampaignById: (id: string) => Campaign | undefined;
-  addCampaign: () => Campaign;
+  addCampaign: () => Campaign | null;
   updateCampaign: (updatedCampaign: Campaign) => void;
   deleteCampaign: (campaignId: string) => void;
 }
@@ -52,81 +52,72 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   );
   
   const addCampaign = useCallback(() => {
-    let finalCampaign: Campaign | null = null;
+    const existingNames = campaigns.map((c) => c.name);
+    let newCampaignNumber = campaigns.length + 1;
+    let newCampaignName = `Campaign ${String(newCampaignNumber).padStart(2, '0')}`;
+
+    while (existingNames.includes(newCampaignName)) {
+      newCampaignNumber++;
+      newCampaignName = `Campaign ${String(newCampaignNumber).padStart(2, '0')}`;
+    }
     
-    setCampaigns(currentCampaigns => {
-      const existingNames = currentCampaigns.map((c) => c.name);
-      let newCampaignNumber = currentCampaigns.length + 1;
-      let newCampaignName = `Campaign ${String(newCampaignNumber).padStart(2, '0')}`;
-  
-      while (existingNames.includes(newCampaignName)) {
-        newCampaignNumber++;
-        newCampaignName = `Campaign ${String(newCampaignNumber).padStart(2, '0')}`;
-      }
-      
-      const newCampaign: Campaign = {
-        id: crypto.randomUUID(),
-        name: newCampaignName,
-        media: [],
-      };
-      
-      finalCampaign = newCampaign;
-      
-      const updatedCampaigns = [...currentCampaigns, newCampaign];
+    const newCampaign: Campaign = {
+      id: crypto.randomUUID(),
+      name: newCampaignName,
+      media: [],
+    };
+    
+    const updatedCampaigns = [...campaigns, newCampaign];
 
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCampaigns));
-      } catch (e) {
-        toast({
-          variant: 'destructive',
-          title: 'Storage Limit Reached',
-          description: "Could not create campaign. Your browser's storage may be full.",
-        });
-        return currentCampaigns;
-      }
-      return updatedCampaigns;
-    });
-
-    return finalCampaign!;
-  }, [toast]);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCampaigns));
+      setCampaigns(updatedCampaigns);
+      return newCampaign;
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Storage Limit Reached',
+        description: "Could not create campaign. Your browser's storage may be full.",
+      });
+      return null;
+    }
+  }, [campaigns, toast]);
 
   const updateCampaign = useCallback(
     (updatedCampaign: Campaign) => {
-      setCampaigns(current => {
-        const newCampaigns = current.map((c) =>
-          c.id === updatedCampaign.id ? updatedCampaign : c
-        );
-        try {
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newCampaigns));
-        } catch(e) {
-            toast({
-              variant: 'destructive',
-              title: 'Storage Limit Reached',
-              description: "Could not save media. Your browser's storage may be full.",
-            });
-            // Revert to previous state on error
-            return current;
-        }
-        return newCampaigns;
-      });
+      const newCampaigns = campaigns.map((c) =>
+        c.id === updatedCampaign.id ? updatedCampaign : c
+      );
+      try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newCampaigns));
+          setCampaigns(newCampaigns);
+      } catch(e) {
+          toast({
+            variant: 'destructive',
+            title: 'Storage Limit Reached',
+            description: "Could not save media. Your browser's storage may be full.",
+          });
+      }
     },
-    [toast]
+    [campaigns, toast]
   );
 
   const deleteCampaign = useCallback(
     (campaignId: string) => {
-      setCampaigns(current => {
-          const newCampaigns = current.filter((c) => c.id !== campaignId);
-          try {
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newCampaigns));
-          } catch(e) {
-            console.error('Error saving campaigns to localStorage', e);
-            // State is already updated, but localStorage is not. This is not ideal but hard to revert.
-          }
-          return newCampaigns;
-      });
+        const newCampaigns = campaigns.filter((c) => c.id !== campaignId);
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newCampaigns));
+          setCampaigns(newCampaigns);
+        } catch(e) {
+          console.error('Error saving campaigns to localStorage', e);
+          toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'Could not delete campaign from storage.',
+        });
+        }
     },
-    []
+    [campaigns, toast]
   );
   
   const value = { campaigns, loaded, getCampaignById, addCampaign, updateCampaign, deleteCampaign };

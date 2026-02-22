@@ -13,17 +13,14 @@ import { useEffect, useState } from 'react';
 
 export default function Home() {
   const router = useRouter();
-  const { campaigns, addCampaign } = useCampaigns();
+  const { campaigns, addCampaign, loaded } = useCampaigns();
   const { settings } = useSettings();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const handleAddCampaign = () => {
     const newCampaign = addCampaign();
-    router.push(`/campaigns/${newCampaign.id}/edit`);
+    if (newCampaign) {
+      router.push(`/campaigns/${newCampaign.id}/edit`);
+    }
   };
 
   const playTargetId = settings.lastPlayedCampaignId ?? campaigns[0]?.id;
@@ -76,7 +73,7 @@ export default function Home() {
           </Link>
         </div>
 
-        {isClient && campaigns.length > 0 && (
+        {loaded && campaigns.length > 0 && (
           <div className="w-full">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {campaigns.map((campaign) => (
@@ -86,7 +83,7 @@ export default function Home() {
           </div>
         )}
         
-        {isClient && campaigns.length === 0 && (
+        {loaded && campaigns.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center text-center rounded-lg border border-dashed py-12">
              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
                 <Film className="h-12 w-12 text-muted-foreground" />
