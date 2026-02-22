@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Settings, Play, Info, Film } from 'lucide-react';
@@ -15,15 +15,18 @@ export default function Home() {
   const router = useRouter();
   const { campaigns, addCampaign, loaded: campaignsLoaded } = useCampaigns();
   const { settings, loaded: settingsLoaded } = useSettings();
-  const autoStartChecked = useRef(false);
 
   useEffect(() => {
     const loaded = campaignsLoaded && settingsLoaded;
-    if (loaded && settings.autoStart && settings.lastPlayedCampaignId && !autoStartChecked.current) {
-      autoStartChecked.current = true;
-      const campaignExists = campaigns.some(c => c.id === settings.lastPlayedCampaignId);
-      if (campaignExists) {
-        router.replace(`/campaigns/${settings.lastPlayedCampaignId}/play`);
+    if (loaded && settings.autoStart && settings.lastPlayedCampaignId) {
+      const autoPlayedInSession = sessionStorage.getItem('autoPlayed');
+      
+      if (!autoPlayedInSession) {
+        const campaignExists = campaigns.some(c => c.id === settings.lastPlayedCampaignId);
+        if (campaignExists) {
+          sessionStorage.setItem('autoPlayed', 'true');
+          router.replace(`/campaigns/${settings.lastPlayedCampaignId}/play`);
+        }
       }
     }
   }, [campaignsLoaded, settingsLoaded, settings.autoStart, settings.lastPlayedCampaignId, campaigns, router]);
