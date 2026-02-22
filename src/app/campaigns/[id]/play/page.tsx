@@ -45,7 +45,7 @@ export default function PlayPage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsExiting(true);
-        router.back();
+        router.push('/');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -78,9 +78,7 @@ export default function PlayPage() {
   
   if (!loaded || !campaign) {
     return (
-        <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
-            <p>Loading Campaign...</p>
-        </div>
+        <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white" />
     );
   }
   
@@ -90,7 +88,7 @@ export default function PlayPage() {
     return (
         <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
             <p>This campaign has no media.</p>
-            <button onClick={() => router.back()} className="px-4 py-2 border rounded">Go Back</button>
+            <button onClick={() => router.push('/')} className="px-4 py-2 border rounded">Go Back</button>
         </div>
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Settings, Play, Info, Film } from 'lucide-react';
@@ -15,10 +15,12 @@ export default function Home() {
   const router = useRouter();
   const { campaigns, addCampaign, loaded: campaignsLoaded } = useCampaigns();
   const { settings, loaded: settingsLoaded } = useSettings();
+  const autoStartChecked = useRef(false);
 
   useEffect(() => {
     const loaded = campaignsLoaded && settingsLoaded;
-    if (loaded && settings.autoStart && settings.lastPlayedCampaignId) {
+    if (loaded && settings.autoStart && settings.lastPlayedCampaignId && !autoStartChecked.current) {
+      autoStartChecked.current = true;
       const campaignExists = campaigns.some(c => c.id === settings.lastPlayedCampaignId);
       if (campaignExists) {
         router.replace(`/campaigns/${settings.lastPlayedCampaignId}/play`);
@@ -107,12 +109,6 @@ export default function Home() {
               <Plus className="mr-2 h-4 w-4" />
               Create Your First Campaign
             </Button>
-          </div>
-        )}
-
-        {!loaded && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center rounded-lg border border-dashed py-12">
-            <p>Loading campaigns...</p>
           </div>
         )}
       </main>
