@@ -16,12 +16,11 @@ export default function CampaignEditorPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { getCampaignById, updateCampaign, deleteCampaign, loaded } = useCampaigns();
+  const { getCampaignById, updateCampaign, deleteCampaign, campaigns, loaded } = useCampaigns();
   const { settings } = useSettings();
   const { toast } = useToast();
   
-  const campaign = getCampaignById(id);
-  
+  const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
   
   const mediaInputRef = useRef<HTMLInputElement>(null);
@@ -41,28 +40,27 @@ export default function CampaignEditorPage() {
 
   useEffect(() => {
     if (loaded) {
-      if (!campaign) {
-        // If campaign is not found, it could be a new campaign being created (race condition)
-        // or an invalid ID. We wait a bit to see if it appears.
-        const timer = setTimeout(() => {
-          if (!getCampaignById(id)) {
-            router.push('/');
-          }
-        }, 1500); // Wait 1.5s
-
-        return () => clearTimeout(timer);
+      const foundCampaign = getCampaignById(id);
+      if (foundCampaign) {
+        setCampaign(foundCampaign);
       } else {
-        // Campaign found, manage selected media
-        if (campaign.media.length > 0 && !selectedMediaId) {
-          setSelectedMediaId(campaign.media[0].id);
-        }
-        
-        if (selectedMediaId && !campaign.media.find(m => m.id === selectedMediaId)) {
-            setSelectedMediaId(campaign.media.length > 0 ? campaign.media[0].id : null)
-        }
+        // If not found after context is loaded, it's an invalid ID
+        router.push('/');
       }
     }
-  }, [id, campaign, loaded, selectedMediaId, router, getCampaignById]);
+  }, [id, loaded, campaigns, getCampaignById, router]);
+
+  useEffect(() => {
+    if (campaign) {
+       if (campaign.media.length > 0 && !selectedMediaId) {
+        setSelectedMediaId(campaign.media[0].id);
+      }
+      
+      if (selectedMediaId && !campaign.media.find(m => m.id === selectedMediaId)) {
+          setSelectedMediaId(campaign.media.length > 0 ? campaign.media[0].id : null)
+      }
+    }
+  }, [campaign, selectedMediaId]);
   
   if (!loaded || !campaign) {
     return <div className="flex items-center justify-center min-h-screen">Loading campaign...</div>;

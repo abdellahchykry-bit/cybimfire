@@ -12,16 +12,27 @@ export default function PlayPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { getCampaignById, loaded } = useCampaigns();
+  const { getCampaignById, campaigns, loaded } = useCampaigns();
   const { settings, updateSettings } = useSettings();
   
-  const campaign = getCampaignById(id);
-
+  const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (loaded) {
+      const foundCampaign = getCampaignById(id);
+      if (foundCampaign) {
+        setCampaign(foundCampaign);
+      } else {
+        // If not found after context is loaded, it's an invalid ID
+        router.push('/');
+      }
+    }
+  }, [id, loaded, campaigns, getCampaignById, router]);
 
   useEffect(() => {
     if (loaded && campaign) {
@@ -64,7 +75,7 @@ export default function PlayPage() {
     goToNext();
   };
   
-  if (!loaded) {
+  if (!loaded || !campaign) {
     return (
         <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
             <p>Loading Campaign...</p>
@@ -80,15 +91,6 @@ export default function PlayPage() {
     'portrait': 'rotate-90',
     'reverse-portrait': '-rotate-90',
   };
-  
-  if (!campaign) {
-    return (
-        <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
-            <p>Campaign not found.</p>
-            <button onClick={() => router.push('/')} className="px-4 py-2 border rounded">Go Home</button>
-        </div>
-    );
-  }
   
   if (campaign.media.length === 0) {
     return (

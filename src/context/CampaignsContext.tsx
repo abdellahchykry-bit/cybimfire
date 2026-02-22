@@ -52,12 +52,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   );
   
   const addCampaign = useCallback(() => {
-    const newCampaign: Campaign = {
-      id: crypto.randomUUID(),
-      name: '', // This will be set inside the state update
-      media: [],
-    };
-
+    let finalCampaign: Campaign | null = null;
+    
     setCampaigns(currentCampaigns => {
       const existingNames = currentCampaigns.map((c) => c.name);
       let newCampaignNumber = currentCampaigns.length + 1;
@@ -68,8 +64,15 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
         newCampaignName = `Campaign ${String(newCampaignNumber).padStart(2, '0')}`;
       }
       
-      const campaignWithCorrectName = { ...newCampaign, name: newCampaignName };
-      const updatedCampaigns = [...currentCampaigns, campaignWithCorrectName];
+      const newCampaign: Campaign = {
+        id: crypto.randomUUID(),
+        name: newCampaignName,
+        media: [],
+      };
+      
+      finalCampaign = newCampaign;
+      
+      const updatedCampaigns = [...currentCampaigns, newCampaign];
 
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCampaigns));
@@ -79,13 +82,12 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
           title: 'Storage Limit Reached',
           description: "Could not create campaign. Your browser's storage may be full.",
         });
-        // Revert state if save fails
         return currentCampaigns;
       }
       return updatedCampaigns;
     });
 
-    return newCampaign;
+    return finalCampaign!;
   }, [toast]);
 
   const updateCampaign = useCallback(
