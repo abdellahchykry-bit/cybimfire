@@ -1,4 +1,4 @@
-import { openDB, type DBSchema } from 'idb';
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Campaign, AppSettings } from '@/lib/types';
 
 const DB_NAME = 'cybim-db';
@@ -18,28 +18,44 @@ interface CybimDB extends DBSchema {
   };
 }
 
-const dbPromise = openDB<CybimDB>(DB_NAME, DB_VERSION, {
-  upgrade(db) {
-    if (!db.objectStoreNames.contains(CAMPAIGNS_STORE)) {
-        db.createObjectStore(CAMPAIGNS_STORE, { keyPath: 'id' });
-    }
-    if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
-        db.createObjectStore(SETTINGS_STORE);
-    }
-  },
-});
+let dbPromise: Promise<IDBPDatabase<CybimDB>> | undefined;
+
+function getDb() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  if (!dbPromise) {
+    dbPromise = openDB<CybimDB>(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(CAMPAIGNS_STORE)) {
+            db.createObjectStore(CAMPAIGNS_STORE, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
+            db.createObjectStore(SETTINGS_STORE);
+        }
+      },
+    });
+  }
+  return dbPromise;
+}
 
 // Campaign Functions
 export async function getCampaignsFromDb(): Promise<Campaign[]> {
-  return (await dbPromise).getAll(CAMPAIGNS_STORE);
+  const db = await getDb();
+  if (!db) return []; // Return empty array on server
+  return db.getAll(CAMPAIGNS_STORE);
 }
 
 export async function saveCampaignToDb(campaign: Campaign): Promise<void> {
-    await (await dbPromise).put(CAMPAIGNS_STORE, campaign);
+    const db = await getDb();
+    if (!db) return; // Do nothing on server
+    await db.put(CAMPAIGNS_STORE, campaign);
 }
 
 export async function deleteCampaignFromDb(id: string): Promise<void> {
-    await (await dbPromise).delete(CAMPAIGNS_STORE, id);
+    const db = await getDb();
+    if (!db) return; // Do nothing on server
+    await db.delete(CAMPAIGNS_STORE, id);
 }
 
 
@@ -53,10 +69,14 @@ const DEFAULTS: AppSettings = {
 };
 
 export async function getSettingsFromDb(): Promise<AppSettings> {
-  const settings = await (await dbPromise).get(SETTINGS_STORE, SETTINGS_KEY);
+  const db = await getDb();
+  if (!db) return DEFAULTS; // Return defaults on server
+  const settings = await db.get(SETTINGS_STORE, SETTINGS_KEY);
   return settings ? { ...DEFAULTS, ...settings } : DEFAULTS;
 }
 
 export async function saveSettingsToDb(settings: AppSettings): Promise<void> {
-  await (await dbPromise).put(SETTINGS_STORE, settings, SETTINGS_KEY);
+  const db = await getDb();
+  if (!db) return; // Do nothing on server
+  await db.put(SETTINGS_STORE, settings, SETTINGS_KEY);
 }
