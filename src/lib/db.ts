@@ -2,7 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Campaign, AppSettings } from '@/lib/types';
 
 const DB_NAME = 'cybim-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Bump version to trigger upgrade
 const CAMPAIGNS_STORE = 'campaigns';
 const SETTINGS_STORE = 'settings';
 const SETTINGS_KEY = 'app-settings';
@@ -21,12 +21,24 @@ interface CybimDB extends DBSchema {
 let dbPromise: Promise<IDBPDatabase<CybimDB>> | undefined;
 
 function getDb() {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || !window.indexedDB) {
     return null;
   }
   if (!dbPromise) {
     dbPromise = openDB<CybimDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      upgrade(db, oldVersion) {
+        // If upgrading from a version before 2, clear out the old object stores
+        // to prevent issues with potentially corrupted data from older app versions.
+        if (oldVersion > 0 && oldVersion < 2) {
+          if (db.objectStoreNames.contains(CAMPAIGNS_STORE)) {
+            db.deleteObjectStore(CAMPAIGNS_STORE);
+          }
+          if (db.objectStoreNames.contains(SETTINGS_STORE)) {
+            db.deleteObjectStore(SETTINGS_STORE);
+          }
+        }
+
+        // Create stores if they don't exist
         if (!db.objectStoreNames.contains(CAMPAIGNS_STORE)) {
             db.createObjectStore(CAMPAIGNS_STORE, { keyPath: 'id' });
         }
@@ -43,7 +55,9 @@ function getDb() {
 export async function getCampaignsFromDb(): Promise<Campaign[]> {
   const db = await getDb();
   if (!db) return []; // Return empty array on server
-  return db.getAll(CAMPAIGNS_STORE);
+  const campaigns = await db.getAll(CAMPAIGNS_STORE);
+  // Defensively filter out any items that aren't valid campaign objects
+  return campaigns.filter(c => typeof c === 'object' && c !== null && typeof c.id === 'string');
 }
 
 export async function saveCampaignToDb(campaign: Campaign): Promise<void> {
@@ -72,7 +86,9 @@ export async function getSettingsFromDb(): Promise<AppSettings> {
   const db = await getDb();
   if (!db) return DEFAULTS; // Return defaults on server
   const settings = await db.get(SETTINGS_STORE, SETTINGS_KEY);
-  return settings ? { ...DEFAULTS, ...settings } : DEFAULTS;
+  // Defensively ensure settings is an object before spreading
+  const cleanSettings = (typeof settings === 'object' && settings !== null) ? settings : {};
+  return { ...DEFAULTS, ...cleanSettings };
 }
 
 export async function saveSettingsToDb(settings: AppSettings): Promise<void> {

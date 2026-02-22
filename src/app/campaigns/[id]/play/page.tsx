@@ -29,7 +29,16 @@ export default function PlayPage() {
       if (foundCampaign) {
         setCampaign(foundCampaign);
       } else {
-        router.push('/');
+        // Retry logic for race condition on load
+        const timer = setTimeout(() => {
+          const retryCampaign = getCampaignById(id);
+          if (retryCampaign) {
+            setCampaign(retryCampaign);
+          } else {
+            router.push('/');
+          }
+        }, 250);
+        return () => clearTimeout(timer);
       }
     }
   }, [id, loaded, campaigns, getCampaignById, router]);
