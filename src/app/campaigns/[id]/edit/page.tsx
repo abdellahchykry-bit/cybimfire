@@ -83,6 +83,7 @@ export default function CampaignEditorPage() {
         m.id === mediaId ? { ...m, ...updates } : m
     );
     const updatedCampaign = { ...campaign, media: newMedia };
+    setCampaign(updatedCampaign); // Update local state immediately for UI responsiveness
     updateCampaign(updatedCampaign);
   };
 

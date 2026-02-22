@@ -41,6 +41,12 @@ export default function Home() {
   const playTargetId = settings.lastPlayedCampaignId ?? campaigns[0]?.id;
   const loaded = campaignsLoaded && settingsLoaded;
 
+  const handlePlayCampaign = () => {
+    if (playTargetId) {
+      router.push(`/campaigns/${playTargetId}/play`);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen p-8 lg:p-12">
       <header className="flex justify-between items-start mb-12">
@@ -76,17 +82,16 @@ export default function Home() {
             <Plus className="mr-2 h-5 w-5" />
             Create Campaign
           </Button>
-          <Link href={playTargetId ? `/campaigns/${playTargetId}/play` : '#'} passHref>
-            <Button
-              variant="outline"
-              size="lg"
-              className="h-12 text-base"
-              disabled={!playTargetId}
-            >
-              <Play className="mr-2 h-5 w-5" />
-              Play Campaigns
-            </Button>
-          </Link>
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-12 text-base"
+            disabled={!playTargetId}
+            onClick={handlePlayCampaign}
+          >
+            <Play className="mr-2 h-5 w-5" />
+            Play Campaigns
+          </Button>
         </div>
 
         {loaded && campaigns.length > 0 && (
