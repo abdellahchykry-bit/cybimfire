@@ -196,7 +196,7 @@ export default function CampaignEditorPage() {
                   onClick={() => setSelectedMediaId(item.id)}
                   className={`flex items-center gap-4 p-2 rounded-lg border-2 ${selectedMediaId === item.id ? 'border-primary' : 'border-transparent'} hover:bg-secondary/50 focus:bg-secondary/50 focus:outline-none`}>
                   <div className="w-24 h-16 bg-secondary rounded-md overflow-hidden relative flex-shrink-0">
-                    {item.type === 'image' && <Image src={item.url} alt="thumbnail" layout="fill" objectFit="cover" unoptimized/>}
+                    {item.type === 'image' && <Image src={item.url} alt="thumbnail" fill style={{ objectFit: "cover" }} unoptimized/>}
                     {item.type === 'video' && <div className="flex items-center justify-center h-full"><Video className="text-muted-foreground"/></div>}
                   </div>
                   <div className="flex-1 truncate">

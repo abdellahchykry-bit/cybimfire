@@ -109,8 +109,8 @@ export default function PlayPage() {
           key={currentItem.id}
           src={currentItem.url}
           alt=""
-          layout="fill"
-          objectFit="contain"
+          fill
+          style={{ objectFit: 'contain' }}
           priority
           unoptimized
         />
