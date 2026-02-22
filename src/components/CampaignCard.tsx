@@ -18,11 +18,11 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
   const { deleteCampaign } = useCampaigns();
   const thumbnail = campaign.media.find(item => item.type === 'image')?.url || campaign.media[0]?.url;
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     // Consider adding a confirmation dialog here
-    deleteCampaign(campaign.id);
+    await deleteCampaign(campaign.id);
   };
   
   const handlePlay = (e: React.MouseEvent) => {

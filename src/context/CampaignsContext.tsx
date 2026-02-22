@@ -3,46 +3,42 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import type { Campaign } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { getCampaignsFromDb, saveCampaignToDb, deleteCampaignFromDb } from '@/lib/db';
 
-const STORAGE_KEY = 'cybim_campaigns';
-
-// The context shape
 interface CampaignsContextType {
   campaigns: Campaign[];
   loaded: boolean;
   getCampaignById: (id: string) => Campaign | undefined;
-  addCampaign: () => Campaign | null;
-  updateCampaign: (updatedCampaign: Campaign) => void;
-  deleteCampaign: (campaignId: string) => void;
+  addCampaign: () => Promise<Campaign | null>;
+  updateCampaign: (updatedCampaign: Campaign) => Promise<void>;
+  deleteCampaign: (campaignId: string) => Promise<void>;
 }
 
-// Create the context
 const CampaignsContext = createContext<CampaignsContextType | undefined>(undefined);
 
-// Helper function to get initial state from localStorage
-const getInitialCampaigns = (): Campaign[] => {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-  try {
-    const item = window.localStorage.getItem(STORAGE_KEY);
-    return item ? JSON.parse(item) : [];
-  } catch (error) {
-    console.error('Error reading campaigns from localStorage', error);
-    return [];
-  }
-};
-
-// The provider component
 export function CampaignsProvider({ children }: { children: ReactNode }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loaded, setLoaded] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    setCampaigns(getInitialCampaigns());
-    setLoaded(true);
-  }, []);
+    async function loadCampaigns() {
+      try {
+        const storedCampaigns = await getCampaignsFromDb();
+        setCampaigns(storedCampaigns);
+      } catch (error) {
+        console.error("Failed to load campaigns from DB", error);
+        toast({
+          variant: "destructive",
+          title: "Load Failed",
+          description: "Could not load campaign data."
+        });
+      } finally {
+        setLoaded(true);
+      }
+    }
+    loadCampaigns();
+  }, [toast]);
 
   const getCampaignById = useCallback(
     (id: string) => {
@@ -51,7 +47,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     [campaigns]
   );
   
-  const addCampaign = useCallback(() => {
+  const addCampaign = useCallback(async () => {
     const existingNames = campaigns.map((c) => c.name);
     let newCampaignNumber = campaigns.length + 1;
     let newCampaignName = `Campaign ${String(newCampaignNumber).padStart(2, '0')}`;
@@ -67,58 +63,50 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       media: [],
     };
     
-    const updatedCampaigns = [...campaigns, newCampaign];
-
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCampaigns));
-      setCampaigns(updatedCampaigns);
+      await saveCampaignToDb(newCampaign);
+      setCampaigns(prev => [...prev, newCampaign]);
       return newCampaign;
     } catch (e) {
+      console.error("Failed to save new campaign", e);
       toast({
         variant: 'destructive',
-        title: 'Storage Limit Reached',
-        description: "Could not create campaign. Your browser's storage may be full.",
+        title: 'Save Failed',
+        description: "Could not create new campaign.",
       });
       return null;
     }
   }, [campaigns, toast]);
 
-  const updateCampaign = useCallback(
-    (updatedCampaign: Campaign) => {
-      const newCampaigns = campaigns.map((c) =>
-        c.id === updatedCampaign.id ? updatedCampaign : c
-      );
-      try {
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newCampaigns));
-          setCampaigns(newCampaigns);
-      } catch(e) {
-          toast({
-            variant: 'destructive',
-            title: 'Storage Limit Reached',
-            description: "Could not save media. Your browser's storage may be full.",
-          });
-      }
-    },
-    [campaigns, toast]
-  );
-
-  const deleteCampaign = useCallback(
-    (campaignId: string) => {
-        const newCampaigns = campaigns.filter((c) => c.id !== campaignId);
-        try {
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newCampaigns));
-          setCampaigns(newCampaigns);
-        } catch(e) {
-          console.error('Error saving campaigns to localStorage', e);
-          toast({
-            variant: 'destructive',
-            title: 'Update Failed',
-            description: 'Could not delete campaign from storage.',
+  const updateCampaign = useCallback(async (updatedCampaign: Campaign) => {
+    try {
+        await saveCampaignToDb(updatedCampaign);
+        setCampaigns(prev => prev.map((c) =>
+          c.id === updatedCampaign.id ? updatedCampaign : c
+        ));
+    } catch(e) {
+        console.error("Failed to update campaign", e);
+        toast({
+          variant: 'destructive',
+          title: 'Storage Error',
+          description: "Could not save campaign changes. The storage may be full.",
         });
-        }
-    },
-    [campaigns, toast]
-  );
+    }
+  }, [toast]);
+
+  const deleteCampaign = useCallback(async (campaignId: string) => {
+      try {
+        await deleteCampaignFromDb(campaignId);
+        setCampaigns(prev => prev.filter((c) => c.id !== campaignId));
+      } catch(e) {
+        console.error('Failed to delete campaign', e);
+        toast({
+          variant: 'destructive',
+          title: 'Delete Failed',
+          description: 'Could not delete campaign.',
+      });
+      }
+  }, [toast]);
   
   const value = { campaigns, loaded, getCampaignById, addCampaign, updateCampaign, deleteCampaign };
 
@@ -129,7 +117,6 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// The custom hook to consume the context
 export function useCampaigns() {
   const context = useContext(CampaignsContext);
   if (context === undefined) {

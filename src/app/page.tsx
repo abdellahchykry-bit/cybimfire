@@ -9,15 +9,14 @@ import Clock from '@/components/Clock';
 import CampaignCard from '@/components/CampaignCard';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
-import { useEffect, useState } from 'react';
 
 export default function Home() {
   const router = useRouter();
   const { campaigns, addCampaign, loaded } = useCampaigns();
   const { settings } = useSettings();
 
-  const handleAddCampaign = () => {
-    const newCampaign = addCampaign();
+  const handleAddCampaign = async () => {
+    const newCampaign = await addCampaign();
     if (newCampaign) {
       router.push(`/campaigns/${newCampaign.id}/edit`);
     }
@@ -96,6 +95,12 @@ export default function Home() {
               <Plus className="mr-2 h-4 w-4" />
               Create Your First Campaign
             </Button>
+          </div>
+        )}
+
+        {!loaded && (
+          <div className="flex-1 flex flex-col items-center justify-center text-center rounded-lg border border-dashed py-12">
+            <p>Loading campaigns...</p>
           </div>
         )}
       </main>

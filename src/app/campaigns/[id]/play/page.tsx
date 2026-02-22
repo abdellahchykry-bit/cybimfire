@@ -12,8 +12,8 @@ export default function PlayPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
-  const { getCampaignById, campaigns, loaded } = useCampaigns();
-  const { settings, updateSettings } = useSettings();
+  const { getCampaignById, campaigns, loaded: campaignsLoaded } = useCampaigns();
+  const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -22,13 +22,14 @@ export default function PlayPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const loaded = campaignsLoaded && settingsLoaded;
+
   useEffect(() => {
     if (loaded) {
       const foundCampaign = getCampaignById(id);
       if (foundCampaign) {
         setCampaign(foundCampaign);
       } else {
-        // If not found after context is loaded, it's an invalid ID
         router.push('/');
       }
     }
@@ -38,7 +39,8 @@ export default function PlayPage() {
     if (loaded && campaign) {
       updateSettings({ lastPlayedCampaignId: id });
     }
-  }, [id, loaded, campaign, updateSettings]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, loaded, campaign]); // updateSettings is stable
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

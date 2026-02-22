@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import type { AppSettings } from '@/lib/types';
-
-const STORAGE_KEY = 'cybim_settings';
+import { getSettingsFromDb, saveSettingsToDb } from '@/lib/db';
 
 const DEFAULTS: AppSettings = {
   orientation: 'landscape',
@@ -13,51 +12,38 @@ const DEFAULTS: AppSettings = {
   defaultImageDuration: 10,
 };
 
-// The context shape
 interface SettingsContextType {
   settings: AppSettings;
-  updateSettings: (newSettings: Partial<AppSettings>) => void;
+  updateSettings: (newSettings: Partial<AppSettings>) => Promise<void>;
+  loaded: boolean;
 }
 
-// Create the context
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-
-// Helper function to get initial state from localStorage
-const getInitialSettings = (): AppSettings => {
-  if (typeof window === 'undefined') {
-    return DEFAULTS;
-  }
-  try {
-    const item = window.localStorage.getItem(STORAGE_KEY);
-    return item ? { ...DEFAULTS, ...JSON.parse(item) } : DEFAULTS;
-  } catch (error) {
-    console.error('Error reading settings from localStorage', error);
-    return DEFAULTS;
-  }
-};
-
-// The provider component
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULTS);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    setSettings(getInitialSettings());
+    async function loadSettings() {
+      const storedSettings = await getSettingsFromDb();
+      setSettings(storedSettings);
+      setLoaded(true);
+    }
+    loadSettings();
   }, []);
 
-  const updateSettings = useCallback((newSettings: Partial<AppSettings>) => {
+  const updateSettings = useCallback(async (newSettings: Partial<AppSettings>) => {
     setSettings(currentSettings => {
       const updated = { ...currentSettings, ...newSettings };
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (error) {
-        console.error('Error saving settings to localStorage', error);
-      }
+      saveSettingsToDb(updated).catch(error => {
+          console.error("Failed to save settings to DB", error);
+      });
       return updated;
     });
   }, []);
 
-  const value = { settings, updateSettings };
+  const value = { settings, updateSettings, loaded };
   
   return (
     <SettingsContext.Provider value={value}>
@@ -66,7 +52,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// The custom hook to consume the context
 export function useSettings() {
   const context = useContext(SettingsContext);
   if (context === undefined) {

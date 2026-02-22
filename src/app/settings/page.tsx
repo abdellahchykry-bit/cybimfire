@@ -1,14 +1,12 @@
 "use client";
 
 import Link from 'next/link';
-import { ArrowLeft, Power } from 'lucide-react';
+import { ArrowLeft, Power, ScreenShare } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import type { Orientation } from '@/lib/types';
-import { ScreenShare } from 'lucide-react';
 
 const orientationOptions: { value: Orientation; label: string; icon: React.ElementType }[] = [
   { value: 'landscape', label: 'Landscape', icon: ScreenShare },
@@ -20,7 +18,11 @@ const orientationOptions: { value: Orientation; label: string; icon: React.Eleme
 const durationOptions = [5, 10, 15, 20, 30, 60];
 
 export default function SettingsPage() {
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, loaded } = useSettings();
+
+  if (!loaded) {
+    return <div className="flex items-center justify-center min-h-screen">Loading settings...</div>;
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8">

@@ -18,44 +18,52 @@ export default function CampaignEditorPage() {
   const router = useRouter();
   const { getCampaignById, updateCampaign, deleteCampaign, campaigns, loaded } = useCampaigns();
   const { settings } = useSettings();
-  const { toast } = useToast();
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
   
   const mediaInputRef = useRef<HTMLInputElement>(null);
-  const campaignRef = useRef(campaign);
 
+  // This ref is used to track the campaign for the cleanup effect,
+  // preventing it from re-running on every campaign state change.
+  const campaignRef = useRef(campaign);
   useEffect(() => {
     campaignRef.current = campaign;
   }, [campaign]);
 
+  // Effect to delete empty campaigns on unmount.
   useEffect(() => {
     return () => {
+      // Use the ref to get the campaign state at the time of unmount.
       if (campaignRef.current && campaignRef.current.media.length === 0) {
+        // This is a fire-and-forget operation.
         deleteCampaign(id);
       }
     };
   }, [id, deleteCampaign]);
 
+  // Effect to find and set the current campaign from the context.
   useEffect(() => {
     if (loaded) {
       const foundCampaign = getCampaignById(id);
       if (foundCampaign) {
         setCampaign(foundCampaign);
       } else {
-        // If not found after context is loaded, it's an invalid ID
+        // If not found after context is loaded, it might be an invalid ID.
         router.push('/');
       }
     }
   }, [id, loaded, campaigns, getCampaignById, router]);
 
+  // Effect to manage the selected media item.
   useEffect(() => {
     if (campaign) {
+       // If there's no selected media, select the first one.
        if (campaign.media.length > 0 && !selectedMediaId) {
         setSelectedMediaId(campaign.media[0].id);
       }
       
+      // If the selected media was deleted, select the new first one or null.
       if (selectedMediaId && !campaign.media.find(m => m.id === selectedMediaId)) {
           setSelectedMediaId(campaign.media.length > 0 ? campaign.media[0].id : null)
       }
@@ -69,6 +77,7 @@ export default function CampaignEditorPage() {
   const selectedMedia = campaign.media.find(m => m.id === selectedMediaId);
 
   const handleMove = (index: number, direction: 'up' | 'down') => {
+    if (!campaign) return;
     const newMedia = [...campaign.media];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newMedia.length) return;
@@ -78,6 +87,7 @@ export default function CampaignEditorPage() {
   };
 
   const handleDelete = (mediaId: string) => {
+    if (!campaign) return;
     const newMedia = campaign.media.filter(m => m.id !== mediaId);
     const updatedCampaign = { ...campaign, media: newMedia };
     updateCampaign(updatedCampaign);
@@ -113,10 +123,12 @@ export default function CampaignEditorPage() {
             };
             videoElement.onerror = () => {
                 window.URL.revokeObjectURL(videoElement.src);
+                console.error("Error loading video metadata for file:", file.name);
                 resolve(null)
             };
             videoElement.src = URL.createObjectURL(file);
           } else {
+            // Unsupported file type
             resolve(null);
           }
         };
@@ -125,27 +137,12 @@ export default function CampaignEditorPage() {
       });
     });
 
-    try {
-      const newMediaItems = (await Promise.all(newMediaPromises)).filter((item): item is MediaItem => item !== null);
-      if (newMediaItems.length > 0) {
-        const updatedCampaign = { ...campaign, media: [...campaign.media, ...newMediaItems] };
-        updateCampaign(updatedCampaign);
-      }
-    } catch (error) {
-      if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.code === 22)) {
-        toast({
-          variant: 'destructive',
-          title: 'Storage Limit Reached',
-          description: "Some files might be too large. Your browser's storage is full.",
-        });
-      } else {
-        console.error(error);
-        toast({
-          variant: 'destructive',
-          title: 'Upload Failed',
-          description: 'An unexpected error occurred while saving media.',
-        });
-      }
+    const results = await Promise.all(newMediaPromises);
+    const newMediaItems = results.filter((item): item is MediaItem => item !== null);
+    
+    if (newMediaItems.length > 0) {
+      const updatedCampaign = { ...campaign, media: [...campaign.media, ...newMediaItems] };
+      await updateCampaign(updatedCampaign); // This now handles its own errors/toasts
     }
     
     if(event.target) {
