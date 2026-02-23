@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Play, Video, Upload } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Video, Upload } from 'lucide-react';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
@@ -83,7 +83,8 @@ export default function CampaignEditorPage() {
         m.id === mediaId ? { ...m, ...updates } : m
     );
     const updatedCampaign = { ...campaign, media: newMedia };
-    setCampaign(updatedCampaign); // Update local state immediately for UI responsiveness
+    // Do not set local state directly. Rely on context propagation for a single source of truth.
+    // This fixes the bug where duration changes were not reliably saved.
     updateCampaign(updatedCampaign);
   };
 
@@ -174,12 +175,6 @@ export default function CampaignEditorPage() {
             <p className="text-muted-foreground">Campaign Editor</p>
           </div>
         </div>
-        <Link href={`/campaigns/${campaign.id}/play`} passHref>
-          <Button size="lg" className="h-12 text-lg" disabled={campaign.media.length === 0}>
-            <Play className="mr-2 h-6 w-6" />
-            Play
-          </Button>
-        </Link>
       </header>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8">
