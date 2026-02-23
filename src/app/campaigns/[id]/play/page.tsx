@@ -80,6 +80,15 @@ export default function PlayPage() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [currentIndex, campaign, isExiting, goToNext]);
+
+  useEffect(() => {
+    const currentItem = campaign?.media[currentIndex];
+    if (currentItem?.type === 'video' && videoRef.current) {
+        videoRef.current.play().catch(error => {
+            console.error("Could not autoplay video, user interaction might be required.", error);
+        });
+    }
+  }, [campaign, currentIndex]);
   
   const handleVideoEnd = () => {
     goToNext();
@@ -121,8 +130,10 @@ export default function PlayPage() {
           ref={videoRef}
           src={currentItem.url}
           autoPlay
+          playsInline
           muted
           onEnded={handleVideoEnd}
+          onError={() => goToNext()}
           className="w-full h-full object-contain"
         />
       )}

@@ -42,13 +42,13 @@
     @apply outline-none ring-4 ring-primary;
   }
 
-  .orientation-reverse-landscape {
+  body.orientation-reverse-landscape {
     transform: rotate(180deg);
   }
-  .orientation-portrait {
+  body.orientation-portrait {
     transform: rotate(90deg);
   }
-  .orientation-reverse-portrait {
+  body.orientation-reverse-portrait {
     transform: rotate(-90deg);
   }
 }
