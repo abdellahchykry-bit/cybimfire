@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Play, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Image as ImageIcon } from 'lucide-react';
 import type { Campaign } from '@/lib/types';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,12 +23,6 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
     e.preventDefault();
     // Consider adding a confirmation dialog here
     await deleteCampaign(campaign.id);
-  };
-  
-  const handlePlay = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    router.push(`/campaigns/${campaign.id}/play`);
   };
 
   return (
@@ -54,11 +48,7 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
         <CardContent className="p-4 flex-1">
           <CardTitle className="text-lg font-headline truncate">{campaign.name}</CardTitle>
         </CardContent>
-        <CardFooter className="p-2 pt-0 flex justify-between">
-          <Button variant="ghost" size="icon" onClick={handlePlay}>
-              <Play />
-              <span className="sr-only">Play {campaign.name}</span>
-          </Button>
+        <CardFooter className="p-2 pt-0 flex justify-end">
           <Button variant="destructive" size="icon" onClick={handleDelete}>
             <Trash2 />
             <span className="sr-only">Delete {campaign.name}</span>

@@ -4,6 +4,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { AppProviders } from '@/providers';
 import OrientationManager from '@/components/OrientationManager';
+import SplashHandler from '@/components/SplashHandler';
 
 export const metadata: Metadata = {
   title: 'CYBIM - Offline Signage Player',
@@ -28,7 +29,9 @@ export default function RootLayout({
       <body className={cn('font-body antialiased', 'bg-background text-foreground')} suppressHydrationWarning>
         <AppProviders>
           <OrientationManager />
-          {children}
+          <SplashHandler>
+            {children}
+          </SplashHandler>
         </AppProviders>
         <Toaster />
       </body>
