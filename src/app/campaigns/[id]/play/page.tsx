@@ -84,14 +84,19 @@ export default function PlayPage() {
   useEffect(() => {
     const currentItem = campaign?.media[currentIndex];
     if (currentItem?.type === 'video' && videoRef.current) {
-        videoRef.current.play().catch(error => {
-            console.error("Could not autoplay video, user interaction might be required.", error);
-            goToNext(); // Skip to next if play fails
-        });
+        // Programmatically play the video to have more control and avoid unreliable autoplay behavior.
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.error("Could not autoplay video, user interaction might be required.", error);
+                goToNext(); // Skip to next if play fails
+            });
+        }
     }
   }, [campaign, currentIndex, goToNext]);
   
   const handleVideoEnd = () => {
+    // This function is only for multi-item playlists. Single videos are handled by the `loop` attribute.
     goToNext();
   };
   
@@ -112,6 +117,8 @@ export default function PlayPage() {
     );
   }
 
+  const isSingleMediaCampaign = campaign.media.length === 1;
+
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       {currentItem?.type === 'image' && (
@@ -130,10 +137,12 @@ export default function PlayPage() {
           key={currentItem.id}
           ref={videoRef}
           src={currentItem.url}
-          autoPlay
+          // Removing `autoPlay` in favor of programmatic play in useEffect for reliability.
           playsInline
           muted
-          onEnded={handleVideoEnd}
+          // The `loop` attribute provides seamless looping for single-video campaigns, handled by the browser.
+          loop={isSingleMediaCampaign}
+          onEnded={isSingleMediaCampaign ? undefined : handleVideoEnd}
           onError={() => goToNext()}
           className="w-full h-full object-cover"
         />
