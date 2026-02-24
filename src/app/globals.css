@@ -31,24 +31,41 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
-    transition: transform 0.5s ease;
+  html, body {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
   *:focus-visible {
     @apply outline-none ring-4 ring-primary;
   }
 
+  /* No transition for smoother programmatic changes */
+  body.orientation-landscape {
+    transform: rotate(0deg);
+  }
   body.orientation-reverse-landscape {
     transform: rotate(180deg);
   }
   body.orientation-portrait {
     transform: rotate(90deg);
+    width: 100vh;
+    height: 100vw;
+    position: fixed;
+    top: 0;
+    left: 100vw;
+    transform-origin: top left;
   }
   body.orientation-reverse-portrait {
     transform: rotate(-90deg);
+    width: 100vh;
+    height: 100vw;
+    position: fixed;
+    top: 100vh;
+    left: 0;
+    transform-origin: top left;
   }
 }

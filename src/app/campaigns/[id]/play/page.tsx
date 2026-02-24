@@ -86,9 +86,10 @@ export default function PlayPage() {
     if (currentItem?.type === 'video' && videoRef.current) {
         videoRef.current.play().catch(error => {
             console.error("Could not autoplay video, user interaction might be required.", error);
+            goToNext(); // Skip to next if play fails
         });
     }
-  }, [campaign, currentIndex]);
+  }, [campaign, currentIndex, goToNext]);
   
   const handleVideoEnd = () => {
     goToNext();
@@ -119,7 +120,7 @@ export default function PlayPage() {
           src={currentItem.url}
           alt=""
           fill
-          style={{ objectFit: 'contain' }}
+          style={{ objectFit: 'cover' }}
           priority
           unoptimized
         />
@@ -134,7 +135,7 @@ export default function PlayPage() {
           muted
           onEnded={handleVideoEnd}
           onError={() => goToNext()}
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover"
         />
       )}
     </div>

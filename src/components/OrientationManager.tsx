@@ -7,7 +7,7 @@ import type { Orientation } from '@/lib/types';
 function setOrientationWithCSS(orientation: Orientation) {
     const body = document.body;
     const classMap = {
-      'landscape': '',
+      'landscape': 'orientation-landscape',
       'reverse-landscape': 'orientation-reverse-landscape',
       'portrait': 'orientation-portrait',
       'reverse-portrait': 'orientation-reverse-portrait',
