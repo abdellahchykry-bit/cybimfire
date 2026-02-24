@@ -1,9 +1,8 @@
 "use client";
 
-import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Trash2, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Pencil, Image as ImageIcon } from 'lucide-react';
 import type { Campaign } from '@/lib/types';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,8 +24,12 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
     await deleteCampaign(campaign.id);
   };
 
+  const handleEdit = (e: React.MouseEvent) => {
+      e.preventDefault();
+      router.push(`/campaigns/${campaign.id}/edit`);
+  }
+
   return (
-    <Link href={`/campaigns/${campaign.id}/edit`} passHref>
       <Card className="flex flex-col h-full overflow-hidden transition-all duration-200 hover:border-primary focus-within:border-primary">
         <CardHeader className="p-0">
           <div className="relative aspect-video w-full bg-secondary">
@@ -48,13 +51,16 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
         <CardContent className="p-4 flex-1">
           <CardTitle className="text-lg font-headline truncate">{campaign.name}</CardTitle>
         </CardContent>
-        <CardFooter className="p-2 pt-0 flex justify-end">
+        <CardFooter className="p-2 pt-0 flex justify-end gap-2">
+           <Button variant="outline" size="icon" onClick={handleEdit}>
+            <Pencil />
+            <span className="sr-only">Edit {campaign.name}</span>
+          </Button>
           <Button variant="destructive" size="icon" onClick={handleDelete}>
             <Trash2 />
             <span className="sr-only">Delete {campaign.name}</span>
           </Button>
         </CardFooter>
       </Card>
-    </Link>
   );
 }

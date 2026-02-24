@@ -37,7 +37,7 @@ export default function PlayPage() {
           } else {
             router.push('/');
           }
-        }, 250);
+        }, 1000);
         return () => clearTimeout(timer);
       }
     }
