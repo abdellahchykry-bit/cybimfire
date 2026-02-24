@@ -25,12 +25,30 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
   };
 
   const handleEdit = (e: React.MouseEvent) => {
+      e.stopPropagation();
       e.preventDefault();
       router.push(`/campaigns/${campaign.id}/edit`);
   }
 
+  const handleCardClick = () => {
+    router.push(`/campaigns/${campaign.id}/edit`);
+  }
+
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      router.push(`/campaigns/${campaign.id}/edit`);
+    }
+  }
+
   return (
-      <Card className="flex flex-col h-full overflow-hidden transition-all duration-200 hover:border-primary focus-within:border-primary">
+      <Card 
+        role="group"
+        tabIndex={0}
+        onClick={handleCardClick}
+        onKeyDown={handleCardKeyDown}
+        className="flex flex-col h-full cursor-pointer overflow-hidden transition-all duration-200 hover:border-primary focus-within:border-primary focus:outline-none focus:ring-4 focus:ring-primary/50"
+      >
         <CardHeader className="p-0">
           <div className="relative aspect-video w-full bg-secondary">
             {thumbnail ? (
@@ -49,9 +67,9 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
           </div>
         </CardHeader>
         <CardContent className="p-4 flex-1">
-          <CardTitle className="text-lg font-headline truncate">{campaign.name}</CardTitle>
+          <CardTitle className="text-lg font-headline">{campaign.name}</CardTitle>
         </CardContent>
-        <CardFooter className="p-2 pt-0 flex justify-end gap-2">
+        <CardFooter className="p-2 pt-0 mt-auto flex justify-end gap-2">
            <Button variant="outline" size="icon" onClick={handleEdit}>
             <Pencil />
             <span className="sr-only">Edit {campaign.name}</span>

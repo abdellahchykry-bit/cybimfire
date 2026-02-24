@@ -137,14 +137,13 @@ export default function PlayPage() {
           key={currentItem.id}
           ref={videoRef}
           src={currentItem.url}
-          // Removing `autoPlay` in favor of programmatic play in useEffect for reliability.
           playsInline
           muted
-          // The `loop` attribute provides seamless looping for single-video campaigns, handled by the browser.
           loop={isSingleMediaCampaign}
           onEnded={isSingleMediaCampaign ? undefined : handleVideoEnd}
           onError={() => goToNext()}
           className="w-full h-full object-cover"
+          poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
         />
       )}
     </div>
