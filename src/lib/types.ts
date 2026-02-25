@@ -1,7 +1,7 @@
 export interface MediaItem {
   id: string;
   type: 'image' | 'video';
-  url: string;
+  blob: Blob;
   duration: number; // in seconds. For images, this is the display duration. For videos, it's the file's length.
 }
 

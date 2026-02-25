@@ -2,11 +2,12 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Trash2, Pencil, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Pencil, Image as ImageIcon, Video } from 'lucide-react';
 import type { Campaign } from '@/lib/types';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react';
 
 interface CampaignCardProps {
   campaign: Campaign;
@@ -15,12 +16,22 @@ interface CampaignCardProps {
 export default function CampaignCard({ campaign }: CampaignCardProps) {
   const router = useRouter();
   const { deleteCampaign } = useCampaigns();
-  const thumbnail = campaign.media.find(item => item.type === 'image')?.url || campaign.media[0]?.url;
+  
+  const thumbnailItem = campaign.media.find(item => item.type === 'image') || campaign.media[0];
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (thumbnailItem?.blob) {
+      const objectUrl = URL.createObjectURL(thumbnailItem.blob);
+      setThumbnailUrl(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+  }, [thumbnailItem]);
+
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    // Consider adding a confirmation dialog here
     await deleteCampaign(campaign.id);
   };
 
@@ -51,9 +62,9 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
       >
         <CardHeader className="p-0">
           <div className="relative aspect-video w-full bg-secondary">
-            {thumbnail ? (
+            {thumbnailUrl && thumbnailItem.type === 'image' ? (
               <Image
-                src={thumbnail}
+                src={thumbnailUrl}
                 alt={campaign.name}
                 fill
                 className="object-cover"
@@ -61,13 +72,16 @@ export default function CampaignCard({ campaign }: CampaignCardProps) {
               />
             ) : (
               <div className="flex items-center justify-center h-full">
-                <ImageIcon className="w-12 h-12 text-muted-foreground" />
+                 {thumbnailItem?.type === 'video' 
+                    ? <Video className="w-12 h-12 text-muted-foreground" />
+                    : <ImageIcon className="w-12 h-12 text-muted-foreground" />
+                 }
               </div>
             )}
           </div>
         </CardHeader>
         <CardContent className="p-4 flex-1">
-          <CardTitle className="text-lg font-headline">{campaign.name}</CardTitle>
+          <CardTitle className="text-lg font-headline truncate">{campaign.name}</CardTitle>
         </CardContent>
         <CardFooter className="p-2 pt-0 mt-auto flex justify-end gap-2">
            <Button variant="outline" size="icon" onClick={handleEdit}>

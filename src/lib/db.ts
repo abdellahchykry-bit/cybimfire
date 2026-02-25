@@ -2,7 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Campaign, AppSettings } from '@/lib/types';
 
 const DB_NAME = 'cybim-db';
-const DB_VERSION = 2; // Bump version to trigger upgrade
+const DB_VERSION = 3; // Bump version to trigger upgrade for new data structure
 const CAMPAIGNS_STORE = 'campaigns';
 const SETTINGS_STORE = 'settings';
 const SETTINGS_KEY = 'app-settings';
@@ -27,9 +27,9 @@ function getDb() {
   if (!dbPromise) {
     dbPromise = openDB<CybimDB>(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
-        // If upgrading from a version before 2, clear out the old object stores
-        // to prevent issues with potentially corrupted data from older app versions.
-        if (oldVersion > 0 && oldVersion < 2) {
+        // If upgrading from a version before 3, clear out the old object stores
+        // to prevent issues with incompatible data structures (e.g. url -> blob).
+        if (oldVersion > 0 && oldVersion < 3) {
           if (db.objectStoreNames.contains(CAMPAIGNS_STORE)) {
             db.deleteObjectStore(CAMPAIGNS_STORE);
           }
@@ -57,7 +57,7 @@ export async function getCampaignsFromDb(): Promise<Campaign[]> {
   if (!db) return []; // Return empty array on server
   const campaigns = await db.getAll(CAMPAIGNS_STORE);
   // Defensively filter out any items that aren't valid campaign objects
-  return campaigns.filter(c => typeof c === 'object' && c !== null && typeof c.id === 'string');
+  return campaigns.filter(c => typeof c === 'object' && c !== null && typeof c.id === 'string' && Array.isArray(c.media));
 }
 
 export async function saveCampaignToDb(campaign: Campaign): Promise<void> {

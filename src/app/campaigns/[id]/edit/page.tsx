@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -13,6 +13,29 @@ import type { Campaign, MediaItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 const durationOptions = [5, 10, 15, 20, 30, 60];
+
+
+const PlaylistItem = ({ item, isSelected, onSelect }: { item: MediaItem; isSelected: boolean; onSelect: () => void; }) => {
+    const [url, setUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (item.blob) {
+            const objectUrl = URL.createObjectURL(item.blob);
+            setUrl(objectUrl);
+            return () => {
+                URL.revokeObjectURL(objectUrl);
+            };
+        }
+    }, [item.blob]);
+    
+    return (
+        <div className="w-24 h-16 bg-secondary rounded-md overflow-hidden relative flex-shrink-0">
+          {item.type === 'image' && url && <Image src={url} alt="thumbnail" fill style={{ objectFit: "cover" }} unoptimized/>}
+          {item.type === 'video' && <div className="flex items-center justify-center h-full"><Video className="text-muted-foreground"/></div>}
+        </div>
+    )
+}
+
 
 export default function CampaignEditorPage() {
   const params = useParams();
@@ -111,20 +134,13 @@ export default function CampaignEditorPage() {
     if (!file || !campaign) return;
 
     try {
-      const url = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file);
-      });
-
       let newItem: MediaItem;
 
       if (file.type.startsWith('image/')) {
         newItem = {
           id: crypto.randomUUID(),
           type: 'image',
-          url,
+          blob: file,
           duration: settings.defaultImageDuration,
         };
       } else if (file.type.startsWith('video/')) {
@@ -135,10 +151,10 @@ export default function CampaignEditorPage() {
             window.URL.revokeObjectURL(videoElement.src);
             resolve(videoElement.duration);
           };
-          videoElement.onerror = () => {
+          videoElement.onerror = (e) => {
             window.URL.revokeObjectURL(videoElement.src);
-            console.error("Error loading video metadata for file:", file.name);
-            reject(new Error("Could not read video metadata."));
+            console.error("Error loading video metadata for file:", file.name, e);
+            reject(new Error("Could not read video metadata. The file might be corrupt."));
           };
           videoElement.src = URL.createObjectURL(file);
         });
@@ -146,7 +162,7 @@ export default function CampaignEditorPage() {
         newItem = {
           id: crypto.randomUUID(),
           type: 'video',
-          url,
+          blob: file,
           duration,
         };
       } else {
@@ -166,12 +182,12 @@ export default function CampaignEditorPage() {
         return updatedCampaign;
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to add media:", error);
       toast({
         variant: "destructive",
         title: "Upload Failed",
-        description: "Could not add the selected media file. It might be too large or corrupted.",
+        description: error.message || "Could not add the selected media file.",
       });
     } finally {
       if (event.target) {
@@ -210,10 +226,9 @@ export default function CampaignEditorPage() {
                   onFocus={() => setSelectedMediaId(item.id)}
                   onClick={() => setSelectedMediaId(item.id)}
                   className={`flex items-center gap-4 p-2 rounded-lg border-2 ${selectedMediaId === item.id ? 'border-primary' : 'border-transparent'} hover:bg-secondary/50 focus:bg-secondary/50 focus:outline-none`}>
-                  <div className="w-24 h-16 bg-secondary rounded-md overflow-hidden relative flex-shrink-0">
-                    {item.type === 'image' && <Image src={item.url} alt="thumbnail" fill style={{ objectFit: "cover" }} unoptimized/>}
-                    {item.type === 'video' && <div className="flex items-center justify-center h-full"><Video className="text-muted-foreground"/></div>}
-                  </div>
+                  
+                  <PlaylistItem item={item} isSelected={selectedMediaId === item.id} onSelect={() => setSelectedMediaId(item.id)} />
+
                   <div className="flex-1 truncate">
                     <p className="font-medium">{`Item ${index + 1}`}</p>
                     <p className="text-sm text-muted-foreground capitalize">{item.type}</p>

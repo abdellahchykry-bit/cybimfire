@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
-import type { Campaign } from '@/lib/types';
+import type { Campaign, MediaItem } from '@/lib/types';
 
 export default function PlayPage() {
   const params = useParams();
@@ -18,6 +18,8 @@ export default function PlayPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   
+  const [currentUrl, setCurrentUrl] = useState<string | null>(null);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -29,7 +31,6 @@ export default function PlayPage() {
       if (foundCampaign) {
         setCampaign(foundCampaign);
       } else {
-        // Retry logic for race condition on load
         const timer = setTimeout(() => {
           const retryCampaign = getCampaignById(id);
           if (retryCampaign) {
@@ -42,6 +43,21 @@ export default function PlayPage() {
       }
     }
   }, [id, loaded, campaigns, getCampaignById, router]);
+  
+  const currentItem = campaign?.media[currentIndex];
+
+  useEffect(() => {
+    if (currentItem?.blob) {
+        const objectUrl = URL.createObjectURL(currentItem.blob);
+        setCurrentUrl(objectUrl);
+
+        return () => {
+            URL.revokeObjectURL(objectUrl);
+            setCurrentUrl(null);
+        };
+    }
+  }, [currentItem]);
+
 
   useEffect(() => {
     if (loaded && campaign) {
@@ -68,9 +84,7 @@ export default function PlayPage() {
 
   useEffect(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    if (!campaign || campaign.media.length === 0 || isExiting) return;
-
-    const currentItem = campaign.media[currentIndex];
+    if (!campaign || campaign.media.length === 0 || isExiting || !currentItem) return;
 
     if (currentItem.type === 'image') {
       timeoutRef.current = setTimeout(goToNext, currentItem.duration * 1000);
@@ -79,24 +93,18 @@ export default function PlayPage() {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [currentIndex, campaign, isExiting, goToNext]);
+  }, [currentIndex, campaign, isExiting, goToNext, currentItem]);
 
   useEffect(() => {
-    const currentItem = campaign?.media[currentIndex];
     if (currentItem?.type === 'video' && videoRef.current) {
-        // Programmatically play the video to have more control and avoid unreliable autoplay behavior.
-        const playPromise = videoRef.current.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(error => {
-                console.error("Could not autoplay video, user interaction might be required.", error);
-                goToNext(); // Skip to next if play fails
-            });
-        }
+        videoRef.current.play().catch(error => {
+            console.error("Could not autoplay video, user interaction might be required.", error);
+            goToNext(); 
+        });
     }
-  }, [campaign, currentIndex, goToNext]);
+  }, [currentItem, goToNext, currentUrl]);
   
   const handleVideoEnd = () => {
-    // This function is only for multi-item playlists. Single videos are handled by the `loop` attribute.
     goToNext();
   };
   
@@ -105,8 +113,6 @@ export default function PlayPage() {
         <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white" />
     );
   }
-  
-  const currentItem = campaign?.media[currentIndex];
 
   if (campaign.media.length === 0) {
     return (
@@ -122,9 +128,10 @@ export default function PlayPage() {
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div key={currentItem?.id} className="w-full h-full animate-fade-in">
-        {currentItem?.type === 'image' && (
+        {currentItem?.type === 'image' && currentUrl && (
           <Image
-            src={currentItem.url}
+            key={currentUrl}
+            src={currentUrl}
             alt=""
             fill
             style={{ objectFit: 'cover' }}
@@ -132,11 +139,11 @@ export default function PlayPage() {
             unoptimized
           />
         )}
-        {currentItem?.type === 'video' && (
+        {currentItem?.type === 'video' && currentUrl && (
           <video
-            key={currentItem.id}
+            key={currentUrl}
             ref={videoRef}
-            src={currentItem.url}
+            src={currentUrl}
             autoPlay
             playsInline
             muted
@@ -145,6 +152,7 @@ export default function PlayPage() {
             onError={() => goToNext()}
             className="w-full h-full object-cover"
             poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+            disableRemotePlayback
           />
         )}
       </div>
