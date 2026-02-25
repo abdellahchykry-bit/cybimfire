@@ -76,7 +76,6 @@ export async function deleteCampaignFromDb(id: string): Promise<void> {
 // Settings Functions
 const DEFAULTS: AppSettings = {
   orientation: 'landscape',
-  autoStart: false,
   lastPlayedCampaignId: null,
   defaultImageDuration: 10,
 };

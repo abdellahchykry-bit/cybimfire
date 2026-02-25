@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
@@ -68,47 +68,63 @@ export default function PlayPage() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Check for Escape key or the 'Back' key which some TV remotes might send
       if (event.key === 'Escape' || event.key === 'Back') {
         event.preventDefault();
         setIsExiting(true);
-        router.back();
+        router.push('/');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [router]);
   
-  const goToNext = useCallback(() => {
-    if (isExiting || !campaign || campaign.media.length === 0) return;
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
-  }, [campaign, isExiting]);
-
-  // Effect for handling image display duration
+  // Consolidated playback logic
   useEffect(() => {
-    if (currentItem?.type === 'image' && currentUrl && !isExiting) {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (isExiting || !currentItem || !currentUrl) {
+      return;
+    }
+
+    const goToNext = () => {
+      if (!campaign || campaign.media.length === 0) return;
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
+    };
+
+    const handleVideoEnd = () => goToNext();
+    const handleVideoError = () => {
+      console.error("Video playback error, skipping.");
+      goToNext();
+    };
+
+    if (currentItem.type === 'image') {
       timeoutRef.current = setTimeout(goToNext, currentItem.duration * 1000);
-      return () => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      };
-    }
-  }, [currentItem, currentUrl, goToNext, isExiting]);
+    } else if (currentItem.type === 'video') {
+      const videoElement = videoRef.current;
+      if (videoElement) {
+        const isSingleMediaCampaign = campaign!.media.length === 1;
+        videoElement.loop = isSingleMediaCampaign;
+        
+        if (!isSingleMediaCampaign) {
+            videoElement.addEventListener('ended', handleVideoEnd);
+        }
+        videoElement.addEventListener('error', handleVideoError);
 
-  // Effect for handling video playback
-  useEffect(() => {
-    const videoElement = videoRef.current;
-    if (currentItem?.type === 'video' && videoElement && !isExiting) {
-       videoElement.play().catch(error => {
-            console.error("Video autoplay failed, skipping.", error);
-            goToNext();
-        });
+        videoElement.play().catch(handleVideoError);
+
+        return () => {
+          if (!isSingleMediaCampaign) {
+            videoElement.removeEventListener('ended', handleVideoEnd);
+          }
+          videoElement.removeEventListener('error', handleVideoError);
+        };
+      }
     }
-  }, [currentItem, goToNext, isExiting]);
-  
-  const handleVideoEnd = () => {
-    goToNext();
-  };
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [currentItem, currentUrl, isExiting, campaign]);
   
   if (!loaded || !campaign) {
     return (
@@ -149,9 +165,6 @@ export default function PlayPage() {
             playsInline
             muted
             autoPlay
-            loop={isSingleMediaCampaign}
-            onEnded={isSingleMediaCampaign ? undefined : handleVideoEnd}
-            onError={() => goToNext()}
             className="w-full h-full object-cover"
             disableRemotePlayback
           />

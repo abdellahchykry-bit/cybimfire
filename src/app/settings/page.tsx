@@ -1,11 +1,10 @@
 "use client";
 
 import Link from 'next/link';
-import { ArrowLeft, Power, ScreenShare } from 'lucide-react';
+import { ArrowLeft, ScreenShare } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import type { Orientation } from '@/lib/types';
 
 const orientationOptions: { value: Orientation; label: string; icon: React.ElementType }[] = [
@@ -77,26 +76,6 @@ export default function SettingsPage() {
                   </Button>
                 ))}
               </div>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <h3 className="text-xl font-headline">Auto Start</h3>
-            <div className="flex items-center space-x-4 rounded-md border p-4">
-              <Power className="w-6 h-6 text-muted-foreground" />
-              <div className="flex-1 space-y-1">
-                <p className="text-lg font-medium">
-                  Auto Start on Launch
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  If enabled, the last played campaign will start automatically when the app opens.
-                </p>
-              </div>
-              <Switch
-                id="auto-start"
-                checked={settings.autoStart}
-                onCheckedChange={(checked) => updateSettings({ autoStart: checked })}
-                aria-label="Toggle auto start"
-              />
             </div>
           </div>
         </CardContent>

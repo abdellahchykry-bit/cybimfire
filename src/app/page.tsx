@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Settings, Play, Info, Film, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Settings, Play, Info, Film } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CybimLogo from '@/components/icons/CybimLogo';
 import Clock from '@/components/Clock';
@@ -16,21 +15,6 @@ export default function Home() {
   const { campaigns, addCampaign, deleteCampaign, loaded: campaignsLoaded } = useCampaigns();
   const { settings, loaded: settingsLoaded } = useSettings();
 
-  useEffect(() => {
-    const loaded = campaignsLoaded && settingsLoaded;
-    if (loaded && settings.autoStart && settings.lastPlayedCampaignId) {
-      const autoPlayedInSession = sessionStorage.getItem('autoPlayed');
-      
-      if (!autoPlayedInSession) {
-        const campaignExists = campaigns.some(c => c.id === settings.lastPlayedCampaignId);
-        if (campaignExists) {
-          sessionStorage.setItem('autoPlayed', 'true');
-          router.push(`/campaigns/${settings.lastPlayedCampaignId}/play`);
-        }
-      }
-    }
-  }, [campaignsLoaded, settingsLoaded, settings.autoStart, settings.lastPlayedCampaignId, campaigns, router]);
-
   const handleAddCampaign = async () => {
     const newCampaign = await addCampaign();
     if (newCampaign) {
@@ -40,12 +24,10 @@ export default function Home() {
 
   const loaded = campaignsLoaded && settingsLoaded;
   
-  // Find the last played campaign, if it still exists.
   const lastPlayedCampaign = loaded && settings.lastPlayedCampaignId 
     ? campaigns.find(c => c.id === settings.lastPlayedCampaignId)
     : undefined;
 
-  // Default to the last played campaign, fallback to the first campaign in the list.
   const playTargetId = lastPlayedCampaign?.id ?? campaigns[0]?.id;
 
   const handlePlayCampaign = () => {
