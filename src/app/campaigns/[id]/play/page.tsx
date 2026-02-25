@@ -121,31 +121,33 @@ export default function PlayPage() {
 
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
-      {currentItem?.type === 'image' && (
-        <Image
-          key={currentItem.id}
-          src={currentItem.url}
-          alt=""
-          fill
-          style={{ objectFit: 'cover' }}
-          priority
-          unoptimized
-        />
-      )}
-      {currentItem?.type === 'video' && (
-        <video
-          key={currentItem.id}
-          ref={videoRef}
-          src={currentItem.url}
-          playsInline
-          muted
-          loop={isSingleMediaCampaign}
-          onEnded={isSingleMediaCampaign ? undefined : handleVideoEnd}
-          onError={() => goToNext()}
-          className="w-full h-full object-cover"
-          poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-        />
-      )}
+      <div key={currentItem?.id} className="w-full h-full animate-fade-in">
+        {currentItem?.type === 'image' && (
+          <Image
+            src={currentItem.url}
+            alt=""
+            fill
+            style={{ objectFit: 'cover' }}
+            priority
+            unoptimized
+          />
+        )}
+        {currentItem?.type === 'video' && (
+          <video
+            key={currentItem.id}
+            ref={videoRef}
+            src={currentItem.url}
+            autoPlay
+            playsInline
+            muted
+            loop={isSingleMediaCampaign}
+            onEnded={isSingleMediaCampaign ? undefined : handleVideoEnd}
+            onError={() => goToNext()}
+            className="w-full h-full object-cover"
+            poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+          />
+        )}
+      </div>
     </div>
   );
 }

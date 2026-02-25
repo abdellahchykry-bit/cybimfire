@@ -10,6 +10,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Campaign, MediaItem } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 const durationOptions = [5, 10, 15, 20, 30, 60];
 
@@ -19,6 +20,7 @@ export default function CampaignEditorPage() {
   const router = useRouter();
   const { getCampaignById, updateCampaign, deleteCampaign, campaigns, loaded } = useCampaigns();
   const { settings } = useSettings();
+  const { toast } = useToast();
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
@@ -105,62 +107,76 @@ export default function CampaignEditorPage() {
   };
   
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0 || !campaign) return;
+    const file = event.target.files?.[0];
+    if (!file || !campaign) return;
 
-    const newMediaPromises = Array.from(files).map(file => {
-      return new Promise<MediaItem | null>((resolve) => {
+    try {
+      const url = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (e) => {
-          const url = e.target?.result as string;
-          if (file.type.startsWith('image/')) {
-            resolve({
-              id: crypto.randomUUID(),
-              type: 'image',
-              url,
-              duration: settings.defaultImageDuration,
-            });
-          } else if (file.type.startsWith('video/')) {
-            const videoElement = document.createElement('video');
-            videoElement.preload = 'metadata';
-            videoElement.onloadedmetadata = () => {
-              window.URL.revokeObjectURL(videoElement.src);
-              resolve({
-                id: crypto.randomUUID(),
-                type: 'video',
-                url,
-                duration: videoElement.duration,
-              });
-            };
-            videoElement.onerror = () => {
-                window.URL.revokeObjectURL(videoElement.src);
-                console.error("Error loading video metadata for file:", file.name);
-                resolve(null)
-            };
-            videoElement.src = URL.createObjectURL(file);
-          } else {
-            resolve(null);
-          }
-        };
-        reader.onerror = () => resolve(null);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
         reader.readAsDataURL(file);
       });
-    });
 
-    const results = await Promise.all(newMediaPromises);
-    const newMediaItems = results.filter((item): item is MediaItem => item !== null);
-    
-    if (newMediaItems.length > 0) {
-       setCampaign(currentCampaign => {
+      let newItem: MediaItem;
+
+      if (file.type.startsWith('image/')) {
+        newItem = {
+          id: crypto.randomUUID(),
+          type: 'image',
+          url,
+          duration: settings.defaultImageDuration,
+        };
+      } else if (file.type.startsWith('video/')) {
+        const duration = await new Promise<number>((resolve, reject) => {
+          const videoElement = document.createElement('video');
+          videoElement.preload = 'metadata';
+          videoElement.onloadedmetadata = () => {
+            window.URL.revokeObjectURL(videoElement.src);
+            resolve(videoElement.duration);
+          };
+          videoElement.onerror = () => {
+            window.URL.revokeObjectURL(videoElement.src);
+            console.error("Error loading video metadata for file:", file.name);
+            reject(new Error("Could not read video metadata."));
+          };
+          videoElement.src = URL.createObjectURL(file);
+        });
+
+        newItem = {
+          id: crypto.randomUUID(),
+          type: 'video',
+          url,
+          duration,
+        };
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Unsupported File",
+          description: "Please select an image or video file.",
+        });
+        return;
+      }
+
+      setCampaign(currentCampaign => {
         if (!currentCampaign) return undefined;
-        const updatedCampaign = { ...currentCampaign, media: [...currentCampaign.media, ...newMediaItems] };
+        const updatedMedia = [...currentCampaign.media, newItem];
+        const updatedCampaign = { ...currentCampaign, media: updatedMedia };
         updateCampaign(updatedCampaign);
         return updatedCampaign;
       });
-    }
-    
-    if(event.target) {
-      event.target.value = '';
+
+    } catch (error) {
+      console.error("Failed to add media:", error);
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: "Could not add the selected media file. It might be too large or corrupted.",
+      });
+    } finally {
+      if (event.target) {
+        event.target.value = ''; // Reset file input
+      }
     }
   };
 
