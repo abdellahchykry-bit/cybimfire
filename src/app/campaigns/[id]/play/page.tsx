@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
-import type { Campaign, MediaItem } from '@/lib/types';
+import type { Campaign } from '@/lib/types';
 
 export default function PlayPage() {
   const params = useParams();
@@ -50,11 +50,11 @@ export default function PlayPage() {
     if (currentItem?.blob) {
         const objectUrl = URL.createObjectURL(currentItem.blob);
         setCurrentUrl(objectUrl);
-
         return () => {
             URL.revokeObjectURL(objectUrl);
-            setCurrentUrl(null);
         };
+    } else {
+        setCurrentUrl(null);
     }
   }, [currentItem]);
 
@@ -78,31 +78,39 @@ export default function PlayPage() {
   }, [router]);
   
   const goToNext = useCallback(() => {
-    if (!campaign || campaign.media.length === 0) return;
+    if (isExiting || !campaign || campaign.media.length === 0) return;
     setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
-  }, [campaign]);
+  }, [campaign, isExiting]);
 
+  // Main playback control effect
   useEffect(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    if (!campaign || campaign.media.length === 0 || isExiting || !currentItem) return;
+    if (!currentItem || !currentUrl || isExiting) {
+      return;
+    }
+    
+    // Always clear previous timeouts
+    if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+    }
 
     if (currentItem.type === 'image') {
       timeoutRef.current = setTimeout(goToNext, currentItem.duration * 1000);
+    } else if (currentItem.type === 'video') {
+      const videoElement = videoRef.current;
+      if (videoElement) {
+        videoElement.play().catch(error => {
+            console.error("Could not autoplay video, skipping.", error);
+            goToNext(); 
+        });
+      }
     }
 
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
-  }, [currentIndex, campaign, isExiting, goToNext, currentItem]);
-
-  useEffect(() => {
-    if (currentItem?.type === 'video' && videoRef.current) {
-        videoRef.current.play().catch(error => {
-            console.error("Could not autoplay video, user interaction might be required.", error);
-            goToNext(); 
-        });
-    }
-  }, [currentItem, goToNext, currentUrl]);
+  }, [currentItem, currentUrl, goToNext, isExiting]);
   
   const handleVideoEnd = () => {
     goToNext();
@@ -144,7 +152,6 @@ export default function PlayPage() {
             key={currentUrl}
             ref={videoRef}
             src={currentUrl}
-            autoPlay
             playsInline
             muted
             loop={isSingleMediaCampaign}
