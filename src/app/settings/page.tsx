@@ -98,23 +98,6 @@ export default function SettingsPage() {
                 aria-label="Toggle auto start"
               />
             </div>
-            <div className="flex items-center space-x-4 rounded-md border p-4">
-              <Power className="w-6 h-6 text-muted-foreground" />
-              <div className="flex-1 space-y-1">
-                <p className="text-lg font-medium">
-                  Start on Boot (Boot Receiver)
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  If enabled, the app will attempt to launch on system startup. (Requires device support)
-                </p>
-              </div>
-              <Switch
-                id="start-on-boot"
-                checked={settings.startOnBoot}
-                onCheckedChange={(checked) => updateSettings({ startOnBoot: checked })}
-                aria-label="Toggle start on boot"
-              />
-            </div>
           </div>
         </CardContent>
       </Card>

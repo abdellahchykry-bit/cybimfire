@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Settings, Play, Info, Film } from 'lucide-react';
+import { Plus, Settings, Play, Info, Film, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CybimLogo from '@/components/icons/CybimLogo';
 import Clock from '@/components/Clock';
@@ -13,7 +13,7 @@ import { useSettings } from '@/context/SettingsContext';
 
 export default function Home() {
   const router = useRouter();
-  const { campaigns, addCampaign, loaded: campaignsLoaded } = useCampaigns();
+  const { campaigns, addCampaign, deleteCampaign, loaded: campaignsLoaded } = useCampaigns();
   const { settings, loaded: settingsLoaded } = useSettings();
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function Home() {
         const campaignExists = campaigns.some(c => c.id === settings.lastPlayedCampaignId);
         if (campaignExists) {
           sessionStorage.setItem('autoPlayed', 'true');
-          router.replace(`/campaigns/${settings.lastPlayedCampaignId}/play`);
+          router.push(`/campaigns/${settings.lastPlayedCampaignId}/play`);
         }
       }
     }
@@ -103,9 +103,14 @@ export default function Home() {
 
         {loaded && campaigns.length > 0 && (
           <div className="w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {campaigns.map((campaign) => (
-                <CampaignCard key={campaign.id} campaign={campaign} />
+                <CampaignCard
+                  key={campaign.id}
+                  campaign={campaign}
+                  onEdit={() => router.push(`/campaigns/${campaign.id}/edit`)}
+                  onDelete={() => deleteCampaign(campaign.id)}
+                />
               ))}
             </div>
           </div>

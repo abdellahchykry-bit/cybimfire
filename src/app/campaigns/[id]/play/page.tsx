@@ -68,9 +68,11 @@ export default function PlayPage() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      // Check for Escape key or the 'Back' key which some TV remotes might send
+      if (event.key === 'Escape' || event.key === 'Back') {
+        event.preventDefault();
         setIsExiting(true);
-        router.push('/');
+        router.back();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -82,35 +84,27 @@ export default function PlayPage() {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
   }, [campaign, isExiting]);
 
-  // Main playback control effect
+  // Effect for handling image display duration
   useEffect(() => {
-    if (!currentItem || !currentUrl || isExiting) {
-      return;
-    }
-    
-    // Always clear previous timeouts
-    if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-    }
-
-    if (currentItem.type === 'image') {
+    if (currentItem?.type === 'image' && currentUrl && !isExiting) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(goToNext, currentItem.duration * 1000);
-    } else if (currentItem.type === 'video') {
-      const videoElement = videoRef.current;
-      if (videoElement) {
-        videoElement.play().catch(error => {
-            console.error("Could not autoplay video, skipping.", error);
-            goToNext(); 
-        });
-      }
+      return () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      };
     }
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
   }, [currentItem, currentUrl, goToNext, isExiting]);
+
+  // Effect for handling video playback
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (currentItem?.type === 'video' && videoElement && !isExiting) {
+       videoElement.play().catch(error => {
+            console.error("Video autoplay failed, skipping.", error);
+            goToNext();
+        });
+    }
+  }, [currentItem, goToNext, isExiting]);
   
   const handleVideoEnd = () => {
     goToNext();
@@ -154,11 +148,11 @@ export default function PlayPage() {
             src={currentUrl}
             playsInline
             muted
+            autoPlay
             loop={isSingleMediaCampaign}
             onEnded={isSingleMediaCampaign ? undefined : handleVideoEnd}
             onError={() => goToNext()}
             className="w-full h-full object-cover"
-            poster="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
             disableRemotePlayback
           />
         )}
