@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Video, Upload } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Video, Upload, Pencil } from 'lucide-react';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
@@ -44,20 +44,18 @@ export default function CampaignEditorPage() {
       if (foundCampaign) {
         setCampaign(foundCampaign);
       } else {
-        // If not found after context is loaded, it might be a new campaign that hasn't populated yet.
-        // Wait a bit before deciding it's an invalid ID.
         const timer = setTimeout(() => {
-          const retryCampaign = getCampaignById(id); // re-check
+          const retryCampaign = getCampaignById(id);
           if (!retryCampaign) {
             router.push('/');
           } else {
             setCampaign(retryCampaign);
           }
-        }, 1000); // 1 sec should be enough
+        }, 1000);
         return () => clearTimeout(timer);
       }
     }
-  }, [id, loaded, campaigns, getCampaignById, router]);
+  }, [id, loaded, getCampaignById, router, campaigns]);
 
   useEffect(() => {
     if (campaign) {
@@ -78,14 +76,15 @@ export default function CampaignEditorPage() {
   const selectedMedia = campaign.media.find(m => m.id === selectedMediaId);
 
   const handleUpdateMediaItem = (mediaId: string, updates: Partial<MediaItem>) => {
-    if (!campaign) return;
-    const newMedia = campaign.media.map(m => 
-        m.id === mediaId ? { ...m, ...updates } : m
-    );
-    const updatedCampaign = { ...campaign, media: newMedia };
-    // Do not set local state directly. Rely on context propagation for a single source of truth.
-    // This fixes the bug where duration changes were not reliably saved.
-    updateCampaign(updatedCampaign);
+    setCampaign(currentCampaign => {
+      if (!currentCampaign) return undefined;
+      const newMedia = currentCampaign.media.map(m => 
+          m.id === mediaId ? { ...m, ...updates } : m
+      );
+      const updatedCampaign = { ...currentCampaign, media: newMedia };
+      updateCampaign(updatedCampaign);
+      return updatedCampaign;
+    });
   };
 
   const handleMove = (index: number, direction: 'up' | 'down') => {
@@ -152,8 +151,12 @@ export default function CampaignEditorPage() {
     const newMediaItems = results.filter((item): item is MediaItem => item !== null);
     
     if (newMediaItems.length > 0) {
-      const updatedCampaign = { ...campaign, media: [...campaign.media, ...newMediaItems] };
-      await updateCampaign(updatedCampaign);
+       setCampaign(currentCampaign => {
+        if (!currentCampaign) return undefined;
+        const updatedCampaign = { ...currentCampaign, media: [...currentCampaign.media, ...newMediaItems] };
+        updateCampaign(updatedCampaign);
+        return updatedCampaign;
+      });
     }
     
     if(event.target) {
@@ -217,7 +220,7 @@ export default function CampaignEditorPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <h3 className="font-semibold">Add Media</h3>
-              <input type="file" ref={mediaInputRef} onChange={handleFileSelect} accept="image/*,video/*" multiple style={{ display: 'none' }} />
+              <input type="file" ref={mediaInputRef} onChange={handleFileSelect} accept="image/*,video/*" style={{ display: 'none' }} />
               <Button className="w-full" onClick={() => mediaInputRef.current?.click()}><Upload className="mr-2"/> Upload Media</Button>
             </div>
 
