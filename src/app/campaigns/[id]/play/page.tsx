@@ -184,7 +184,6 @@ export default function PlayPage() {
             src={currentUrl}
             playsInline
             muted
-            autoPlay
             className="w-full h-full object-cover"
             disableRemotePlayback
           />
