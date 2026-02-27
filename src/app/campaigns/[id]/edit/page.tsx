@@ -270,7 +270,7 @@ export default function CampaignEditorPage() {
 
             {selectedMedia?.type === 'image' && (
                <div className="text-muted-foreground p-4 border border-dashed rounded-md">
-                Image duration is set to {selectedMedia.duration}s in the main settings.
+                Image duration is set to {settings.defaultImageDuration}s. This can be changed in the main settings.
               </div>
             )}
              {selectedMedia?.type === 'video' && (

@@ -90,7 +90,7 @@ export default function PlayPage() {
     };
 
     if (currentItem.type === 'image') {
-      const timer = setTimeout(goToNext, currentItem.duration * 1000);
+      const timer = setTimeout(goToNext, settings.defaultImageDuration * 1000);
       return () => clearTimeout(timer); // Cleanup for image timer
     }
 
@@ -146,7 +146,7 @@ export default function PlayPage() {
         videoElement.removeEventListener('error', handleVideoError);
       };
     }
-  }, [currentItem, currentUrl, campaign]);
+  }, [currentItem, currentUrl, campaign, settings.defaultImageDuration]);
   
   if (!loaded || !campaign) {
     return (
