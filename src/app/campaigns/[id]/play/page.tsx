@@ -12,7 +12,7 @@ export default function PlayPage() {
   const id = params.id as string;
   const router = useRouter();
   const { getCampaignById, campaigns, loaded: campaignsLoaded } = useCampaigns();
-  const { loaded: settingsLoaded } = useSettings();
+  const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -61,12 +61,22 @@ export default function PlayPage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' || event.key === 'Back') {
         event.preventDefault();
+        
+        // If this was the startup campaign, disable auto-start
+        if (settings.startupCampaignId === id) {
+          updateSettings({ startupCampaignId: null });
+        }
+        
         router.push('/');
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [router]);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [router, id, settings.startupCampaignId, updateSettings]);
   
   // Consolidated playback logic
   useEffect(() => {
