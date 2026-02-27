@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
 import type { Campaign } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PlayPage() {
   const params = useParams();
@@ -13,6 +14,7 @@ export default function PlayPage() {
   const router = useRouter();
   const { getCampaignById, campaigns, loaded: campaignsLoaded } = useCampaigns();
   const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
+  const { toast } = useToast();
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -20,30 +22,25 @@ export default function PlayPage() {
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const loaded = campaignsLoaded && settingsLoaded;
 
+  // Load campaign data
   useEffect(() => {
     if (loaded) {
       const foundCampaign = getCampaignById(id);
       if (foundCampaign) {
         setCampaign(foundCampaign);
       } else {
-        const timer = setTimeout(() => {
-          const retryCampaign = getCampaignById(id);
-          if (retryCampaign) {
-            setCampaign(retryCampaign);
-          } else {
-            router.push('/');
-          }
-        }, 1000);
-        return () => clearTimeout(timer);
+        router.push('/');
       }
     }
   }, [id, loaded, campaigns, getCampaignById, router]);
   
   const currentItem = campaign?.media[currentIndex];
 
+  // Create blob URL for current media item
   useEffect(() => {
     if (currentItem?.blob) {
         const objectUrl = URL.createObjectURL(currentItem.blob);
@@ -56,6 +53,7 @@ export default function PlayPage() {
   }, [currentItem]);
 
 
+  // Back button handler
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' || event.key === 'Back') {
@@ -79,79 +77,67 @@ export default function PlayPage() {
   
   // Consolidated playback logic
   useEffect(() => {
-    if (!currentItem || !currentUrl || !campaign) {
-      return;
-    }
+    if (!currentItem || !currentUrl || !campaign) return;
 
     const goToNext = () => {
-      if (campaign.media.length > 0) {
-        setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
-      }
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
     };
-
-    if (currentItem.type === 'image') {
-      const timer = setTimeout(goToNext, settings.defaultImageDuration * 1000);
-      return () => clearTimeout(timer); // Cleanup for image timer
+    
+    // Always clear previous timer/listeners
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    const videoElement = videoRef.current;
+    if (videoElement) {
+        videoElement.onended = null;
+        videoElement.onerror = null;
+        videoElement.oncanplaythrough = null;
     }
 
-    if (currentItem.type === 'video') {
-      const videoElement = videoRef.current;
-      if (!videoElement) return;
+    if (currentItem.type === 'image') {
+      timeoutRef.current = setTimeout(goToNext, settings.defaultImageDuration * 1000);
+    }
 
+    if (currentItem.type === 'video' && videoElement) {
       const isSingleMediaCampaign = campaign.media.length === 1;
       videoElement.loop = isSingleMediaCampaign;
 
       const handleVideoEnd = () => goToNext();
-      const handleVideoError = () => {
-        console.error("Video playback error, skipping.");
+      const handleVideoError = (e: Event | string) => {
+        console.error("Video playback error, skipping.", e);
+        toast({ variant: 'destructive', title: 'Playback Error', description: 'Could not play video file.' });
         goToNext();
       };
       
       const playVideo = () => {
-        if (!videoElement) return;
-        
         // Explicitly mute before playing for maximum compatibility.
         videoElement.muted = true;
-        
-        try {
-            const playPromise = videoElement.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.error("Video autoplay promise failed, skipping.", error);
-                    handleVideoError();
-                });
-            }
-        } catch (error) {
-            console.error("Video autoplay threw an error, skipping.", error);
-            handleVideoError();
+        const playPromise = videoElement.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error("Video autoplay was prevented.", error);
+            handleVideoError(error as any);
+          });
         }
       };
 
-      // Add listeners
       if (!isSingleMediaCampaign) {
-        videoElement.addEventListener('ended', handleVideoEnd);
+        videoElement.onended = handleVideoEnd;
       }
-      videoElement.addEventListener('error', handleVideoError);
+      videoElement.onerror = handleVideoError;
       
-      // Attempt to play only when the video is ready
       if (videoElement.readyState >= 4) { // HAVE_ENOUGH_DATA
         playVideo();
       } else {
-        videoElement.addEventListener('canplaythrough', playVideo, { once: true });
+        videoElement.oncanplaythrough = playVideo;
       }
-
-      // Cleanup for video listeners
-      return () => {
-        videoElement.removeEventListener('ended', handleVideoEnd);
-        videoElement.removeEventListener('error', handleVideoError);
-      };
     }
-  }, [currentItem, currentUrl, campaign, settings.defaultImageDuration]);
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [currentItem, currentUrl, campaign, settings.defaultImageDuration, toast]);
   
   if (!loaded || !campaign) {
-    return (
-        <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white" />
-    );
+    return <div className="bg-black flex items-center justify-center h-screen w-screen text-white" />;
   }
 
   if (campaign.media.length === 0) {
