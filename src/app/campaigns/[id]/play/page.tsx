@@ -123,7 +123,16 @@ export default function PlayPage() {
         }
         videoElement.addEventListener('error', handleVideoError);
 
-        videoElement.play().catch(handleVideoError);
+        const playPromise = videoElement.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            // A rejected play promise is not always a fatal error.
+            // The `autoPlay` attribute might still succeed.
+            // We'll log a warning but won't skip the video.
+            // The `error` event listener will handle true playback failures.
+            console.warn("Programmatic video play was prevented. Relying on autoplay.", error);
+          });
+        }
       }
     }
 
@@ -147,7 +156,7 @@ export default function PlayPage() {
 
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
-      <div key={currentItem?.id} className="w-full h-full">
+      <div key={currentItem?.id} className="w-full h-full animate-in fade-in-25">
         {currentItem?.type === 'image' && currentUrl && (
           <Image
             key={currentUrl}
