@@ -108,12 +108,22 @@ export default function PlayPage() {
       };
       
       const playVideo = () => {
-        const playPromise = videoElement.play();
-        if (playPromise) {
-          playPromise.catch(error => {
-            console.error("Video autoplay failed, skipping.", error);
+        if (!videoElement) return;
+        
+        // Explicitly mute before playing for maximum compatibility.
+        videoElement.muted = true;
+        
+        try {
+            const playPromise = videoElement.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.error("Video autoplay promise failed, skipping.", error);
+                    handleVideoError();
+                });
+            }
+        } catch (error) {
+            console.error("Video autoplay threw an error, skipping.", error);
             handleVideoError();
-          });
         }
       };
 
@@ -124,10 +134,10 @@ export default function PlayPage() {
       videoElement.addEventListener('error', handleVideoError);
       
       // Attempt to play only when the video is ready
-      if (videoElement.readyState >= videoElement.HAVE_ENOUGH_DATA) {
+      if (videoElement.readyState >= 4) { // HAVE_ENOUGH_DATA
         playVideo();
       } else {
-        videoElement.addEventListener('canplay', playVideo, { once: true });
+        videoElement.addEventListener('canplaythrough', playVideo, { once: true });
       }
 
       // Cleanup for video listeners
