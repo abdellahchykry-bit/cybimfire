@@ -69,8 +69,8 @@
     transform-origin: top left;
   }
   
-  /* Hide cast icon on videos */
-  video::-webkit-media-controls-remote-playback-button {
+  /* Force hide all video controls for a clean signage experience */
+  video::-webkit-media-controls {
     display: none !important;
   }
 }
