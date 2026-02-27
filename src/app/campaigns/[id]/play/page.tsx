@@ -12,11 +12,10 @@ export default function PlayPage() {
   const id = params.id as string;
   const router = useRouter();
   const { getCampaignById, campaigns, loaded: campaignsLoaded } = useCampaigns();
-  const { updateSettings, loaded: settingsLoaded } = useSettings();
+  const { loaded: settingsLoaded } = useSettings();
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isExiting, setIsExiting] = useState(false);
   
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   
@@ -52,25 +51,16 @@ export default function PlayPage() {
         setCurrentUrl(objectUrl);
         return () => {
             URL.revokeObjectURL(objectUrl);
+            setCurrentUrl(null);
         };
-    } else {
-        setCurrentUrl(null);
     }
   }, [currentItem]);
 
 
   useEffect(() => {
-    if (loaded && campaign) {
-      updateSettings({ lastPlayedCampaignId: id });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, loaded, campaign]); // updateSettings is stable
-
-  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' || event.key === 'Back') {
         event.preventDefault();
-        setIsExiting(true);
         router.push('/');
       }
     };
@@ -80,13 +70,26 @@ export default function PlayPage() {
   
   // Consolidated playback logic
   useEffect(() => {
-    if (isExiting || !currentItem || !currentUrl) {
+    if (!currentItem || !currentUrl) {
       return;
     }
 
     const goToNext = () => {
       if (!campaign || campaign.media.length === 0) return;
       setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
+    };
+    
+    // Cleanup function
+    const cleanup = () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        const videoElement = videoRef.current;
+        if (videoElement) {
+          videoElement.removeEventListener('ended', handleVideoEnd);
+          videoElement.removeEventListener('error', handleVideoError);
+        }
     };
 
     const handleVideoEnd = () => goToNext();
@@ -96,8 +99,10 @@ export default function PlayPage() {
     };
 
     if (currentItem.type === 'image') {
+      cleanup();
       timeoutRef.current = setTimeout(goToNext, currentItem.duration * 1000);
     } else if (currentItem.type === 'video') {
+      cleanup();
       const videoElement = videoRef.current;
       if (videoElement) {
         const isSingleMediaCampaign = campaign!.media.length === 1;
@@ -109,22 +114,11 @@ export default function PlayPage() {
         videoElement.addEventListener('error', handleVideoError);
 
         videoElement.play().catch(handleVideoError);
-
-        return () => {
-          if (!isSingleMediaCampaign) {
-            videoElement.removeEventListener('ended', handleVideoEnd);
-          }
-          videoElement.removeEventListener('error', handleVideoError);
-        };
       }
     }
 
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [currentItem, currentUrl, isExiting, campaign]);
+    return cleanup;
+  }, [currentItem, currentUrl, campaign]);
   
   if (!loaded || !campaign) {
     return (
@@ -141,11 +135,9 @@ export default function PlayPage() {
     );
   }
 
-  const isSingleMediaCampaign = campaign.media.length === 1;
-
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
-      <div key={currentItem?.id} className="w-full h-full animate-fade-in">
+      <div key={currentItem?.id} className="w-full h-full">
         {currentItem?.type === 'image' && currentUrl && (
           <Image
             key={currentUrl}
