@@ -19,20 +19,14 @@ export default function Home() {
 
   const loaded = campaignsLoaded && settingsLoaded;
   
-  const lastPlayedCampaign = loaded && settings.lastPlayedCampaignId 
-    ? campaigns.find(c => c.id === settings.lastPlayedCampaignId)
-    : undefined;
-
-  const playTargetId = lastPlayedCampaign?.id ?? campaigns[0]?.id;
+  const playTargetId = settings.startupCampaignId ?? campaigns[0]?.id;
 
   useEffect(() => {
-    if (loaded && settings.startOnBoot && !hasRedirected.current) {
-      if (playTargetId) {
+    if (loaded && settings.startupCampaignId && !hasRedirected.current) {
         hasRedirected.current = true;
-        router.push(`/campaigns/${playTargetId}/play`);
-      }
+        router.push(`/campaigns/${settings.startupCampaignId}/play`);
     }
-  }, [loaded, settings.startOnBoot, playTargetId, router]);
+  }, [loaded, settings.startupCampaignId, router]);
 
 
   const handleAddCampaign = async () => {
@@ -48,7 +42,7 @@ export default function Home() {
     }
   };
 
-  if (loaded && settings.startOnBoot && playTargetId) {
+  if (loaded && settings.startupCampaignId && !hasRedirected.current) {
     return (
         <div className="bg-background flex flex-col items-center justify-center h-screen w-screen">
              <div className="flex flex-col items-center justify-center gap-4">

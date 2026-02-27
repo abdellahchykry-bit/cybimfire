@@ -76,9 +76,8 @@ export async function deleteCampaignFromDb(id: string): Promise<void> {
 // Settings Functions
 const DEFAULTS: AppSettings = {
   orientation: 'landscape',
-  lastPlayedCampaignId: null,
+  startupCampaignId: null,
   defaultImageDuration: 10,
-  startOnBoot: false,
 };
 
 export async function getSettingsFromDb(): Promise<AppSettings> {
@@ -87,6 +86,18 @@ export async function getSettingsFromDb(): Promise<AppSettings> {
   const settings = await db.get(SETTINGS_STORE, SETTINGS_KEY);
   // Defensively ensure settings is an object before spreading
   const cleanSettings = (typeof settings === 'object' && settings !== null) ? settings : {};
+
+  // Simple migration from old settings structure
+  if ('startOnBoot' in cleanSettings) {
+    delete (cleanSettings as any).startOnBoot;
+  }
+  if ('lastPlayedCampaignId' in cleanSettings) {
+     if (!('startupCampaignId' in cleanSettings) || cleanSettings.startupCampaignId === null) {
+        (cleanSettings as any).startupCampaignId = (cleanSettings as any).lastPlayedCampaignId;
+    }
+    delete (cleanSettings as any).lastPlayedCampaignId;
+  }
+
   return { ...DEFAULTS, ...cleanSettings };
 }
 

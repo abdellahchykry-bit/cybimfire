@@ -6,7 +6,7 @@ import { getSettingsFromDb, saveSettingsToDb } from '@/lib/db';
 
 const DEFAULTS: AppSettings = {
   orientation: 'landscape',
-  lastPlayedCampaignId: null,
+  startupCampaignId: null,
   defaultImageDuration: 10,
 };
 

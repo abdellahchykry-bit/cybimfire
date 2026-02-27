@@ -6,8 +6,6 @@ import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Orientation } from '@/lib/types';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 
 const orientationOptions: { value: Orientation; label: string; icon: React.ElementType }[] = [
   { value: 'landscape', label: 'Landscape', icon: ScreenShare },
@@ -43,27 +41,6 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-12 pt-8">
-          <div className="space-y-4">
-            <h3 className="text-xl font-headline">Startup</h3>
-            <div className="rounded-md border p-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <Label htmlFor="start-on-boot" className="text-lg font-medium">
-                        Auto-start on Launch
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                        Automatically play the last used campaign when the app starts.
-                        </p>
-                    </div>
-                    <Switch
-                        id="start-on-boot"
-                        checked={settings.startOnBoot}
-                        onCheckedChange={(checked) => updateSettings({ startOnBoot: checked })}
-                        aria-label="Auto-start on launch"
-                    />
-                </div>
-            </div>
-          </div>
           <div className="space-y-4">
             <h3 className="text-xl font-headline">Screen Orientation</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

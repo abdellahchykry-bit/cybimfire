@@ -4,13 +4,15 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Video, Upload, Pencil } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ArrowDown, Trash2, Video, Upload, Rocket } from 'lucide-react';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Campaign, MediaItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const durationOptions = [5, 10, 15, 20, 30, 60];
 
@@ -42,7 +44,7 @@ export default function CampaignEditorPage() {
   const id = params.id as string;
   const router = useRouter();
   const { getCampaignById, updateCampaign, deleteCampaign, campaigns, loaded } = useCampaigns();
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
@@ -195,6 +197,11 @@ export default function CampaignEditorPage() {
       }
     }
   };
+  
+  const handleStartupChange = (isStartup: boolean) => {
+    updateSettings({ startupCampaignId: isStartup ? campaign.id : null });
+  };
+
 
   return (
     <div className="flex flex-col min-h-screen p-8">
@@ -253,6 +260,27 @@ export default function CampaignEditorPage() {
               <h3 className="font-semibold">Add Media</h3>
               <input type="file" ref={mediaInputRef} onChange={handleFileSelect} accept="image/*,video/*" style={{ display: 'none' }} />
               <Button className="w-full" onClick={() => mediaInputRef.current?.click()}><Upload className="mr-2"/> Upload Media</Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                 <Rocket className="h-6 w-6 text-primary" />
+                 <h3 className="font-semibold text-lg">Startup</h3>
+              </div>
+              <div className="rounded-md border p-4 flex items-center justify-between">
+                <div>
+                  <Label htmlFor="startup-switch" className="font-medium">Auto-start on Launch</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Play this campaign when the app starts.
+                  </p>
+                </div>
+                <Switch
+                  id="startup-switch"
+                  checked={settings.startupCampaignId === campaign.id}
+                  onCheckedChange={handleStartupChange}
+                  aria-label="Auto-start on launch"
+                />
+              </div>
             </div>
 
             {selectedMedia?.type === 'image' && (
