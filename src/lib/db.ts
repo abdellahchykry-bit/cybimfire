@@ -78,6 +78,7 @@ const DEFAULTS: AppSettings = {
   orientation: 'landscape',
   lastPlayedCampaignId: null,
   defaultImageDuration: 10,
+  startOnBoot: false,
 };
 
 export async function getSettingsFromDb(): Promise<AppSettings> {

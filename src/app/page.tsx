@@ -9,18 +9,13 @@ import Clock from '@/components/Clock';
 import CampaignCard from '@/components/CampaignCard';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
+import { useEffect, useRef } from 'react';
 
 export default function Home() {
   const router = useRouter();
   const { campaigns, addCampaign, deleteCampaign, loaded: campaignsLoaded } = useCampaigns();
   const { settings, loaded: settingsLoaded } = useSettings();
-
-  const handleAddCampaign = async () => {
-    const newCampaign = await addCampaign();
-    if (newCampaign) {
-      router.push(`/campaigns/${newCampaign.id}/edit`);
-    }
-  };
+  const hasRedirected = useRef(false);
 
   const loaded = campaignsLoaded && settingsLoaded;
   
@@ -30,11 +25,40 @@ export default function Home() {
 
   const playTargetId = lastPlayedCampaign?.id ?? campaigns[0]?.id;
 
+  useEffect(() => {
+    if (loaded && settings.startOnBoot && !hasRedirected.current) {
+      if (playTargetId) {
+        hasRedirected.current = true;
+        router.push(`/campaigns/${playTargetId}/play`);
+      }
+    }
+  }, [loaded, settings.startOnBoot, playTargetId, router]);
+
+
+  const handleAddCampaign = async () => {
+    const newCampaign = await addCampaign();
+    if (newCampaign) {
+      router.push(`/campaigns/${newCampaign.id}/edit`);
+    }
+  };
+
   const handlePlayCampaign = () => {
     if (playTargetId) {
       router.push(`/campaigns/${playTargetId}/play`);
     }
   };
+
+  if (loaded && settings.startOnBoot && playTargetId) {
+    return (
+        <div className="bg-background flex flex-col items-center justify-center h-screen w-screen">
+             <div className="flex flex-col items-center justify-center gap-4">
+                <CybimLogo className="w-16 h-16" />
+                <p className="text-lg text-muted-foreground/80 mt-1">Starting campaign...</p>
+            </div>
+        </div>
+    );
+  }
+
 
   return (
     <div className="flex flex-col min-h-screen p-8 lg:p-12">

@@ -17,4 +17,5 @@ export interface AppSettings {
   orientation: Orientation;
   lastPlayedCampaignId: string | null;
   defaultImageDuration: number;
+  startOnBoot: boolean;
 }
