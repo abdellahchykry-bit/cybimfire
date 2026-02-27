@@ -20,7 +20,6 @@ export default function PlayPage() {
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const loaded = campaignsLoaded && settingsLoaded;
 
@@ -80,63 +79,63 @@ export default function PlayPage() {
   
   // Consolidated playback logic
   useEffect(() => {
-    if (!currentItem || !currentUrl) {
+    if (!currentItem || !currentUrl || !campaign) {
       return;
     }
 
     const goToNext = () => {
-      if (!campaign || campaign.media.length === 0) return;
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
-    };
-    
-    // Cleanup function
-    const cleanup = () => {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-          timeoutRef.current = null;
-        }
-        const videoElement = videoRef.current;
-        if (videoElement) {
-          videoElement.removeEventListener('ended', handleVideoEnd);
-          videoElement.removeEventListener('error', handleVideoError);
-        }
-    };
-
-    const handleVideoEnd = () => goToNext();
-    const handleVideoError = () => {
-      console.error("Video playback error, skipping.");
-      goToNext();
+      if (campaign.media.length > 0) {
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
+      }
     };
 
     if (currentItem.type === 'image') {
-      cleanup();
-      timeoutRef.current = setTimeout(goToNext, currentItem.duration * 1000);
-    } else if (currentItem.type === 'video') {
-      cleanup();
-      const videoElement = videoRef.current;
-      if (videoElement) {
-        const isSingleMediaCampaign = campaign!.media.length === 1;
-        videoElement.loop = isSingleMediaCampaign;
-        
-        if (!isSingleMediaCampaign) {
-            videoElement.addEventListener('ended', handleVideoEnd);
-        }
-        videoElement.addEventListener('error', handleVideoError);
-
-        const playPromise = videoElement.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            // A rejected play promise is not always a fatal error.
-            // The `autoPlay` attribute might still succeed.
-            // We'll log a warning but won't skip the video.
-            // The `error` event listener will handle true playback failures.
-            console.warn("Programmatic video play was prevented. Relying on autoplay.", error);
-          });
-        }
-      }
+      const timer = setTimeout(goToNext, currentItem.duration * 1000);
+      return () => clearTimeout(timer); // Cleanup for image timer
     }
 
-    return cleanup;
+    if (currentItem.type === 'video') {
+      const videoElement = videoRef.current;
+      if (!videoElement) return;
+
+      const isSingleMediaCampaign = campaign.media.length === 1;
+      videoElement.loop = isSingleMediaCampaign;
+
+      const handleVideoEnd = () => goToNext();
+      const handleVideoError = () => {
+        console.error("Video playback error, skipping.");
+        goToNext();
+      };
+      
+      const playVideo = () => {
+        const playPromise = videoElement.play();
+        if (playPromise) {
+          playPromise.catch(error => {
+            console.error("Video autoplay failed, skipping.", error);
+            handleVideoError();
+          });
+        }
+      };
+
+      // Add listeners
+      if (!isSingleMediaCampaign) {
+        videoElement.addEventListener('ended', handleVideoEnd);
+      }
+      videoElement.addEventListener('error', handleVideoError);
+      
+      // Attempt to play only when the video is ready
+      if (videoElement.readyState >= videoElement.HAVE_ENOUGH_DATA) {
+        playVideo();
+      } else {
+        videoElement.addEventListener('canplay', playVideo, { once: true });
+      }
+
+      // Cleanup for video listeners
+      return () => {
+        videoElement.removeEventListener('ended', handleVideoEnd);
+        videoElement.removeEventListener('error', handleVideoError);
+      };
+    }
   }, [currentItem, currentUrl, campaign]);
   
   if (!loaded || !campaign) {
@@ -156,7 +155,7 @@ export default function PlayPage() {
 
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
-      <div key={currentItem?.id} className="w-full h-full animate-in fade-in-25">
+      <div key={currentItem?.id} className="w-full h-full">
         {currentItem?.type === 'image' && currentUrl && (
           <Image
             key={currentUrl}
