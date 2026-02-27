@@ -68,4 +68,9 @@
     left: 0;
     transform-origin: top left;
   }
+  
+  /* Hide cast icon on videos */
+  video::-webkit-media-controls-remote-playback-button {
+    display: none !important;
+  }
 }

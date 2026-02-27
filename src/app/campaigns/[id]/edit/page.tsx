@@ -14,9 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
-const durationOptions = [5, 10, 15, 20, 30, 60];
-
-
 const PlaylistItem = ({ item, isSelected, onSelect }: { item: MediaItem; isSelected: boolean; onSelect: () => void; }) => {
     const [url, setUrl] = useState<string | null>(null);
 
@@ -101,18 +98,6 @@ export default function CampaignEditorPage() {
   }
   
   const selectedMedia = campaign.media.find(m => m.id === selectedMediaId);
-
-  const handleUpdateMediaItem = (mediaId: string, updates: Partial<MediaItem>) => {
-    setCampaign(currentCampaign => {
-      if (!currentCampaign) return undefined;
-      const newMedia = currentCampaign.media.map(m => 
-          m.id === mediaId ? { ...m, ...updates } : m
-      );
-      const updatedCampaign = { ...currentCampaign, media: newMedia };
-      updateCampaign(updatedCampaign);
-      return updatedCampaign;
-    });
-  };
 
   const handleMove = (index: number, direction: 'up' | 'down') => {
     if (!campaign) return;
@@ -284,19 +269,8 @@ export default function CampaignEditorPage() {
             </div>
 
             {selectedMedia?.type === 'image' && (
-              <div className="space-y-4">
-                <h3 className="font-semibold">Image Duration</h3>
-                <div className="flex flex-wrap gap-2">
-                  {durationOptions.map((duration) => (
-                    <Button
-                      key={duration}
-                      variant={selectedMedia.duration === duration ? 'default' : 'outline'}
-                      onClick={() => handleUpdateMediaItem(selectedMedia.id, { duration })}
-                    >
-                      {duration}s
-                    </Button>
-                  ))}
-                </div>
+               <div className="text-muted-foreground p-4 border border-dashed rounded-md">
+                Image duration is set to {selectedMedia.duration}s in the main settings.
               </div>
             )}
              {selectedMedia?.type === 'video' && (
