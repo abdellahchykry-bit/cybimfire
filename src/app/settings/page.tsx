@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { ArrowLeft, ScreenShare } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
-import { useCampaigns } from '@/context/CampaignsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 type Orientation = 'landscape' | 'reverse-landscape' | 'portrait' | 'reverse-portrait';
 
@@ -21,11 +21,8 @@ const durationOptions = [5, 10, 15, 20, 30, 60];
 
 export default function SettingsPage() {
   const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
-  const { campaigns, loaded: campaignsLoaded } = useCampaigns();
   
-  const loaded = settingsLoaded && campaignsLoaded;
-
-  if (!loaded) {
+  if (!settingsLoaded) {
     return <div className="flex items-center justify-center min-h-screen">Loading settings...</div>;
   }
 
@@ -85,32 +82,19 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="space-y-4">
-            <h3 className="text-xl font-headline">Auto-start on Launch</h3>
-             <div className="rounded-md border p-6 space-y-4">
-                <p className="text-sm text-muted-foreground">
-                    Select a campaign to play automatically when the app starts.
-                </p>
-                <Button
-                    variant={settings.startupCampaignId === null ? 'default' : 'outline'}
-                    onClick={() => updateSettings({ startupCampaignId: null })}
-                    className="w-full justify-start text-base py-6"
-                >
-                    None (manual start)
-                </Button>
-                <Separator />
-                <div className="max-h-60 overflow-y-auto pr-2 space-y-2">
-                {campaigns.map((campaign) => (
-                    <Button
-                        key={campaign.id}
-                        variant={settings.startupCampaignId === campaign.id ? 'default' : 'outline'}
-                        className="w-full justify-start"
-                        onClick={() => updateSettings({ startupCampaignId: campaign.id })}
-                    >
-                        {campaign.name}
-                    </Button>
-                ))}
-                {campaigns.length === 0 && <p className="text-sm text-center text-muted-foreground py-4">No campaigns available to select.</p>}
+            <h3 className="text-xl font-headline">Playback</h3>
+            <div className="flex items-center justify-between rounded-lg border p-6">
+                <div>
+                    <Label htmlFor="autoplay-all" className="text-base font-medium">Autoplay All Campaigns</Label>
+                    <p className="text-sm text-muted-foreground pt-1">
+                        When enabled, all campaigns will play one after another in a loop.
+                    </p>
                 </div>
+              <Switch
+                id="autoplay-all"
+                checked={settings.autoplayAll}
+                onCheckedChange={(checked) => updateSettings({ autoplayAll: checked })}
+              />
             </div>
           </div>
         </CardContent>

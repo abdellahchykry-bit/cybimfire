@@ -36,7 +36,7 @@ export default function PlayPage() {
         router.push('/');
       }
     }
-  }, [id, loaded, campaigns, getCampaignById, router]);
+  }, [id, loaded, getCampaignById, router]);
   
   const currentItem = campaign?.media[currentIndex];
 
@@ -64,9 +64,9 @@ export default function PlayPage() {
       if (event.key === 'Escape' || event.key === 'Back') {
         event.preventDefault();
         
-        // If this was the auto-started campaign, disable the setting.
-        if (settings.startupCampaignId === id) {
-          updateSettings({ startupCampaignId: null });
+        // If autoplay all is on, turn it off when exiting.
+        if (settings.autoplayAll) {
+          updateSettings({ autoplayAll: false });
         }
         
         router.push('/');
@@ -78,7 +78,7 @@ export default function PlayPage() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [router, id, settings.startupCampaignId, updateSettings]);
+  }, [router, settings.autoplayAll, updateSettings]);
   
   const goToNext = useCallback(() => {
     if (!campaign) return;
@@ -86,17 +86,23 @@ export default function PlayPage() {
     const isLastItem = currentIndex === campaign.media.length - 1;
   
     if (isLastItem) {
-      // Loop current campaign
-      if (campaign.media.length === 1) { // Single-item campaign needs a forced re-render
-          setLoopTrigger(t => t + 1);
+      if (settings.autoplayAll && campaigns.length > 1) {
+        const currentCampaignIndex = campaigns.findIndex(c => c.id === id);
+        const nextCampaignIndex = (currentCampaignIndex + 1) % campaigns.length;
+        const nextCampaignId = campaigns[nextCampaignIndex].id;
+        router.replace(`/campaigns/${nextCampaignId}/play`);
       } else {
-          setCurrentIndex(0);
+        // Loop current campaign
+        setCurrentIndex(0);
+        if (campaign.media.length === 1) { // Single-item campaign needs a forced re-render
+            setLoopTrigger(t => t + 1);
+        }
       }
     } else {
       // Go to next item in the same campaign
       setCurrentIndex(prev => prev + 1);
     }
-  }, [campaign, currentIndex]);
+  }, [campaign, currentIndex, settings.autoplayAll, campaigns, id, router]);
 
   
   // Consolidated playback logic
@@ -120,13 +126,14 @@ export default function PlayPage() {
     }
 
     if (currentItem.type === 'video' && videoElement) {
-      videoElement.onended = handleVideoEnd;
-      videoElement.onerror = handleVideoError;
+        videoElement.src = currentUrl;
+        videoElement.onended = handleVideoEnd;
+        videoElement.onerror = handleVideoError;
       
-      const playPromise = videoElement.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(handleVideoError);
-      }
+        const playPromise = videoElement.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(handleVideoError);
+        }
     }
 
     return () => {
@@ -134,6 +141,9 @@ export default function PlayPage() {
       if (videoElement) {
         videoElement.onended = null;
         videoElement.onerror = null;
+        videoElement.pause();
+        videoElement.src = '';
+        videoElement.load();
       }
     };
   }, [currentItem, currentUrl, campaign, settings.defaultImageDuration, goToNext, loopTrigger]);
@@ -155,7 +165,7 @@ export default function PlayPage() {
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="w-full h-full">
         <Image
-            key={currentIndex + '-img'}
+            key={currentIndex + '-img' + loopTrigger}
             src={(currentItem?.type === 'image' && currentUrl) ? currentUrl : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"}
             alt=""
             fill
@@ -168,12 +178,10 @@ export default function PlayPage() {
             unoptimized
         />
         <video
-            key={currentIndex + '-vid'}
+            key={currentIndex + '-vid' + loopTrigger}
             ref={videoRef}
-            src={(currentItem?.type === 'video' && currentUrl) ? currentUrl : undefined}
             playsInline
             muted
-            autoPlay
             className="w-full h-full object-cover"
             style={{ 
               opacity: currentItem?.type === 'video' ? 1 : 0,
