@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
 import type { Campaign } from '@/lib/types';
-import { useToast } from '@/hooks/use-toast';
 
 export default function PlayPage() {
   const params = useParams();
@@ -14,7 +13,6 @@ export default function PlayPage() {
   const router = useRouter();
   const { getCampaignById, campaigns, loaded: campaignsLoaded } = useCampaigns();
   const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
-  const { toast } = useToast();
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -81,7 +79,7 @@ export default function PlayPage() {
   
   // Consolidated playback logic
   useEffect(() => {
-    if (!currentItem || !currentUrl || !campaign) return;
+    if (!currentItem || !campaign) return;
 
     const goToNext = () => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
@@ -93,14 +91,14 @@ export default function PlayPage() {
     if (videoElement) {
         videoElement.onended = null;
         videoElement.onerror = null;
-        videoElement.oncanplaythrough = null; // Clean up previous listener
+        videoElement.oncanplaythrough = null;
     }
 
     if (currentItem.type === 'image') {
       timeoutRef.current = setTimeout(goToNext, settings.defaultImageDuration * 1000);
     }
 
-    if (currentItem.type === 'video' && videoElement) {
+    if (currentItem.type === 'video' && videoElement && currentUrl) {
       const isSingleMediaCampaign = campaign.media.length === 1;
       videoElement.loop = isSingleMediaCampaign;
 
@@ -111,17 +109,14 @@ export default function PlayPage() {
       };
       
       const handleVideoError = (e: Event | string) => {
-        // Fix for the reported console error
-        toast({ variant: 'destructive', title: 'Playback Error', description: 'Could not play video file.' });
         goToNext();
       };
       
       const playVideo = () => {
-        videoElement.muted = true; // Ensure muted for autoplay
+        videoElement.muted = true;
         const playPromise = videoElement.play();
         if (playPromise !== undefined) {
           playPromise.catch(error => {
-            // A rejected play promise is a fatal error for this video.
             handleVideoError(error.toString());
           });
         }
@@ -132,7 +127,6 @@ export default function PlayPage() {
       
       videoElement.oncanplaythrough = playVideo;
 
-      // In some cases, 'oncanplaythrough' may have already fired. Check the readyState.
       if (videoElement.readyState >= 4) { // HAVE_ENOUGH_DATA
         playVideo();
       }
@@ -141,7 +135,7 @@ export default function PlayPage() {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [currentItem, currentUrl, campaign, settings.defaultImageDuration, toast]);
+  }, [currentItem, currentUrl, campaign, settings.defaultImageDuration]);
   
   if (!loaded || !campaign) {
     return <div className="bg-black flex items-center justify-center h-screen w-screen text-white" />;
@@ -159,28 +153,28 @@ export default function PlayPage() {
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="w-full h-full">
-        {currentItem?.type === 'image' && currentUrl && (
-          <Image
-            key={currentUrl}
-            src={currentUrl}
+        <Image
+            key={currentIndex + '-img'}
+            src={(currentItem?.type === 'image' && currentUrl) ? currentUrl : ""}
             alt=""
             fill
-            style={{ objectFit: 'cover' }}
+            style={{ 
+              objectFit: 'cover', 
+              display: currentItem?.type === 'image' ? 'block' : 'none' 
+            }}
             priority
             unoptimized
-          />
-        )}
-        {currentItem?.type === 'video' && currentUrl && (
-          <video
-            key={currentUrl}
+        />
+        <video
+            key={currentIndex + '-vid'}
             ref={videoRef}
-            src={currentUrl}
+            src={(currentItem?.type === 'video' && currentUrl) ? currentUrl : ""}
             playsInline
             muted
             className="w-full h-full object-cover"
+            style={{ display: currentItem?.type === 'video' ? 'block' : 'none' }}
             disableRemotePlayback
-          />
-        )}
+        />
       </div>
     </div>
   );

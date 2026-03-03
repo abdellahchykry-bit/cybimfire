@@ -3,8 +3,11 @@
 import Link from 'next/link';
 import { ArrowLeft, ScreenShare } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
+import { useCampaigns } from '@/context/CampaignsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import type { Orientation } from '@/lib/types';
 
 const orientationOptions: { value: Orientation; label: string; icon: React.ElementType }[] = [
@@ -17,7 +20,10 @@ const orientationOptions: { value: Orientation; label: string; icon: React.Eleme
 const durationOptions = [5, 10, 15, 20, 30, 60];
 
 export default function SettingsPage() {
-  const { settings, updateSettings, loaded } = useSettings();
+  const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
+  const { campaigns, loaded: campaignsLoaded } = useCampaigns();
+  
+  const loaded = settingsLoaded && campaignsLoaded;
 
   if (!loaded) {
     return <div className="flex items-center justify-center min-h-screen">Loading settings...</div>;
@@ -77,6 +83,31 @@ export default function SettingsPage() {
                 ))}
               </div>
             </div>
+          </div>
+          <div className="space-y-4">
+            <h3 className="text-xl font-headline">Startup Campaign</h3>
+             <div className="rounded-md border p-6 space-y-4">
+                 <Label htmlFor="startup-campaign-select">Auto-start on Launch</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Choose a campaign to play automatically when the app starts.
+                  </p>
+                <Select
+                    value={settings.startupCampaignId || 'none'}
+                    onValueChange={(value) => updateSettings({ startupCampaignId: value === 'none' ? null : value })}
+                >
+                    <SelectTrigger id="startup-campaign-select">
+                        <SelectValue placeholder="Select a campaign..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {campaigns.map((campaign) => (
+                        <SelectItem key={campaign.id} value={campaign.id}>
+                            {campaign.name}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+             </div>
           </div>
         </CardContent>
       </Card>
