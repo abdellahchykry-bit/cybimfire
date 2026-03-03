@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
 import type { Campaign } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PlayPage() {
   const params = useParams();
@@ -16,6 +17,7 @@ export default function PlayPage() {
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loopTrigger, setLoopTrigger] = useState(0);
   
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   
@@ -89,6 +91,9 @@ export default function PlayPage() {
         if (currentCampaignIndex === -1) {
           // Should not happen, but as a fallback, loop the current campaign
           setCurrentIndex(0);
+          if (campaign.media.length === 1) {
+            setLoopTrigger(t => t + 1);
+          }
           return;
         }
         const nextCampaignIndex = (currentCampaignIndex + 1) % campaigns.length;
@@ -96,7 +101,11 @@ export default function PlayPage() {
         router.push(`/campaigns/${nextCampaign.id}/play`);
       } else {
         // Loop current campaign
-        setCurrentIndex(0);
+        if (currentIndex === 0) { // Single-item campaign needs a forced re-render
+            setLoopTrigger(t => t + 1);
+        } else {
+            setCurrentIndex(0);
+        }
       }
     } else {
       // Go to next item in the same campaign
@@ -116,6 +125,7 @@ export default function PlayPage() {
     if (videoElement) {
         videoElement.onended = null;
         videoElement.onerror = null;
+        videoElement.removeEventListener('canplaythrough', playVideo);
     }
 
     if (currentItem.type === 'image') {
@@ -123,7 +133,7 @@ export default function PlayPage() {
     }
 
     if (currentItem.type === 'video' && videoElement) {
-      videoElement.loop = false; // Never loop single video, rely on goToNext
+      videoElement.loop = false;
       
       const handleVideoEnd = () => {
         goToNext();
@@ -141,24 +151,22 @@ export default function PlayPage() {
         }
       };
 
-      videoElement.addEventListener('canplay', playVideo);
+      videoElement.addEventListener('canplaythrough', playVideo, { once: true });
       videoElement.onended = handleVideoEnd;
       videoElement.onerror = handleVideoError;
       
-      if (videoElement.readyState >= 3) {
-          playVideo();
-      }
+      videoElement.load();
     }
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (videoElement && playVideo) {
-        videoElement.removeEventListener('canplay', playVideo);
+        videoElement.removeEventListener('canplaythrough', playVideo);
         videoElement.onended = null;
         videoElement.onerror = null;
       }
     };
-  }, [currentItem, currentUrl, campaign, settings.defaultImageDuration, goToNext]);
+  }, [currentItem, currentUrl, campaign, settings.defaultImageDuration, goToNext, loopTrigger]);
   
   if (!loaded || !campaign) {
     return <div className="bg-black flex items-center justify-center h-screen w-screen text-white" />;
