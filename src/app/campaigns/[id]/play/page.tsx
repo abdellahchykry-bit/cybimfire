@@ -79,26 +79,24 @@ export default function PlayPage() {
   
   // Consolidated playback logic
   useEffect(() => {
-    if (!currentItem || !campaign) return;
+    if (!currentItem || !campaign || !currentUrl) return;
 
     const goToNext = () => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
     };
     
-    // Always clear previous timer/listeners
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     const videoElement = videoRef.current;
     if (videoElement) {
         videoElement.onended = null;
         videoElement.onerror = null;
-        videoElement.oncanplaythrough = null;
     }
 
     if (currentItem.type === 'image') {
       timeoutRef.current = setTimeout(goToNext, settings.defaultImageDuration * 1000);
     }
 
-    if (currentItem.type === 'video' && videoElement && currentUrl) {
+    if (currentItem.type === 'video' && videoElement) {
       const isSingleMediaCampaign = campaign.media.length === 1;
       videoElement.loop = isSingleMediaCampaign;
 
@@ -109,6 +107,7 @@ export default function PlayPage() {
       };
       
       const handleVideoError = (e: Event | string) => {
+        // Silently skip to next.
         goToNext();
       };
       
@@ -125,11 +124,7 @@ export default function PlayPage() {
       videoElement.onended = handleVideoEnd;
       videoElement.onerror = handleVideoError;
       
-      videoElement.oncanplaythrough = playVideo;
-
-      if (videoElement.readyState >= 4) { // HAVE_ENOUGH_DATA
-        playVideo();
-      }
+      playVideo();
     }
 
     return () => {
@@ -155,7 +150,7 @@ export default function PlayPage() {
       <div className="w-full h-full">
         <Image
             key={currentIndex + '-img'}
-            src={(currentItem?.type === 'image' && currentUrl) ? currentUrl : ""}
+            src={(currentItem?.type === 'image' && currentUrl) ? currentUrl : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"}
             alt=""
             fill
             style={{ 
@@ -168,7 +163,7 @@ export default function PlayPage() {
         <video
             key={currentIndex + '-vid'}
             ref={videoRef}
-            src={(currentItem?.type === 'video' && currentUrl) ? currentUrl : ""}
+            src={(currentItem?.type === 'video' && currentUrl) ? currentUrl : undefined}
             playsInline
             muted
             className="w-full h-full object-cover"
