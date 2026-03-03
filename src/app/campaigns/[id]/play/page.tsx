@@ -42,16 +42,19 @@ export default function PlayPage() {
 
   // Create blob URL for current media item
   useEffect(() => {
+    let objectUrl: string | null = null;
     if (currentItem?.blob) {
-        const objectUrl = URL.createObjectURL(currentItem.blob);
-        setCurrentUrl(objectUrl);
-        return () => {
-            if (objectUrl) {
-                URL.revokeObjectURL(objectUrl);
-            }
-            setCurrentUrl(null);
-        };
+      objectUrl = URL.createObjectURL(currentItem.blob);
+      setCurrentUrl(objectUrl);
+    } else {
+      setCurrentUrl(null);
     }
+    
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
   }, [currentItem]);
 
 
@@ -61,7 +64,6 @@ export default function PlayPage() {
       if (event.key === 'Escape' || event.key === 'Back') {
         event.preventDefault();
         
-        // If this was the startup campaign, disable auto-start
         if (settings.startupCampaignId === id) {
           updateSettings({ startupCampaignId: null });
         }
@@ -91,7 +93,7 @@ export default function PlayPage() {
     if (videoElement) {
         videoElement.onended = null;
         videoElement.onerror = null;
-        videoElement.oncanplaythrough = null;
+        videoElement.oncanplay = null; // Clean up previous listener
     }
 
     if (currentItem.type === 'image') {
@@ -107,18 +109,21 @@ export default function PlayPage() {
             goToNext();
         }
       };
+      
       const handleVideoError = (e: Event | string) => {
-        console.error("Video playback error, skipping.", e);
+        // Fix for the reported console error
+        console.error("Video playback error, skipping.");
         toast({ variant: 'destructive', title: 'Playback Error', description: 'Could not play video file.' });
         goToNext();
       };
       
       const playVideo = () => {
+        videoElement.muted = true; // Ensure muted for autoplay
         const playPromise = videoElement.play();
         if (playPromise !== undefined) {
           playPromise.catch(error => {
-            console.error("Video autoplay was prevented.", error);
-            // Don't call handleVideoError here, as some browsers throw errors for muted autoplay which is fine.
+            // A rejected play promise is a fatal error for this video.
+            handleVideoError(error.toString());
           });
         }
       };
@@ -126,10 +131,14 @@ export default function PlayPage() {
       videoElement.onended = handleVideoEnd;
       videoElement.onerror = handleVideoError;
       
-      if (videoElement.readyState >= 4) { // HAVE_ENOUGH_DATA
+      // 'oncanplay' fires when the browser can start playing, which is often
+      // sooner than 'oncanplaythrough'. This can help start faster.
+      videoElement.oncanplay = playVideo;
+
+      // In some cases, 'oncanplay' may have already fired before the listener
+      // was attached. Check the readyState and play if ready.
+      if (videoElement.readyState >= 3) { // HAVE_FUTURE_DATA
         playVideo();
-      } else {
-        videoElement.oncanplaythrough = playVideo;
       }
     }
 
