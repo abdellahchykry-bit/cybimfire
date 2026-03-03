@@ -2,7 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Campaign, AppSettings } from '@/lib/types';
 
 const DB_NAME = 'cybim-db';
-const DB_VERSION = 4; // Bump version to migrate settings
+const DB_VERSION = 4; 
 const CAMPAIGNS_STORE = 'campaigns';
 const SETTINGS_STORE = 'settings';
 const SETTINGS_KEY = 'app-settings';
@@ -75,7 +75,7 @@ export async function deleteCampaignFromDb(id: string): Promise<void> {
 // Settings Functions
 const DEFAULTS: AppSettings = {
   orientation: 'landscape',
-  autoplayAll: false,
+  startupCampaignId: null,
   defaultImageDuration: 10,
 };
 
@@ -86,8 +86,8 @@ export async function getSettingsFromDb(): Promise<AppSettings> {
   
   // Clean up old properties if they exist from previous versions
   if (settings && typeof settings === 'object') {
-     if ('startupCampaignId' in settings) {
-      delete (settings as any).startupCampaignId;
+     if ('autoplayAll' in settings) {
+      delete (settings as any).autoplayAll;
     }
   } else {
     settings = {};

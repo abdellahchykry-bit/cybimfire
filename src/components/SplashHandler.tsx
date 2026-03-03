@@ -1,24 +1,35 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import SplashScreen from '@/components/SplashScreen';
+import { useSettings } from '@/context/SettingsContext';
+import { useCampaigns } from '@/context/CampaignsContext';
 
 export default function SplashHandler({ children }: { children: React.ReactNode }) {
-    const [loading, setLoading] = useState(true);
-    const [isClient, setIsClient] = useState(false);
+    const [isReady, setIsReady] = useState(false);
+    const { settings, loaded: settingsLoaded } = useSettings();
+    const { campaigns, loaded: campaignsLoaded } = useCampaigns();
+    const router = useRouter();
 
     useEffect(() => {
-        setIsClient(true);
+        const dataLoaded = settingsLoaded && campaignsLoaded;
+        if (!dataLoaded) return;
+
         const timer = setTimeout(() => {
-            setLoading(false);
-        }, 3000);
+            const { startupCampaignId } = settings;
+            const startupCampaignExists = campaigns.some(c => c.id === startupCampaignId);
+
+            if (startupCampaignId && startupCampaignExists) {
+                router.replace(`/campaigns/${startupCampaignId}/play`);
+            } else {
+                setIsReady(true);
+            }
+        }, 2000); // Wait 2 seconds before deciding what to do
 
         return () => clearTimeout(timer);
-    }, []);
 
-    if (!isClient) {
-        return null;
-    }
+    }, [settingsLoaded, campaignsLoaded, settings, campaigns, router]);
 
-    return loading ? <SplashScreen /> : <>{children}</>;
+    return isReady ? <>{children}</> : <SplashScreen />;
 }

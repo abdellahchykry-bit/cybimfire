@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
 import type { Campaign } from '@/lib/types';
-import { useToast } from '@/hooks/use-toast';
 
 export default function PlayPage() {
   const params = useParams();
@@ -65,8 +64,9 @@ export default function PlayPage() {
       if (event.key === 'Escape' || event.key === 'Back') {
         event.preventDefault();
         
-        if (settings.autoplayAll) {
-          updateSettings({ autoplayAll: false });
+        // If this was the auto-started campaign, disable the setting.
+        if (settings.startupCampaignId === id) {
+          updateSettings({ startupCampaignId: null });
         }
         
         router.push('/');
@@ -78,40 +78,25 @@ export default function PlayPage() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [router, settings.autoplayAll, updateSettings]);
+  }, [router, id, settings.startupCampaignId, updateSettings]);
   
   const goToNext = useCallback(() => {
-    if (!campaign || !campaigns || campaigns.length === 0) return;
+    if (!campaign) return;
   
     const isLastItem = currentIndex === campaign.media.length - 1;
   
     if (isLastItem) {
-      if (settings.autoplayAll) {
-        const currentCampaignIndex = campaigns.findIndex(c => c.id === id);
-        if (currentCampaignIndex === -1) {
-          // Should not happen, but as a fallback, loop the current campaign
-          setCurrentIndex(0);
-          if (campaign.media.length === 1) {
-            setLoopTrigger(t => t + 1);
-          }
-          return;
-        }
-        const nextCampaignIndex = (currentCampaignIndex + 1) % campaigns.length;
-        const nextCampaign = campaigns[nextCampaignIndex];
-        router.push(`/campaigns/${nextCampaign.id}/play`);
+      // Loop current campaign
+      if (campaign.media.length === 1) { // Single-item campaign needs a forced re-render
+          setLoopTrigger(t => t + 1);
       } else {
-        // Loop current campaign
-        if (currentIndex === 0) { // Single-item campaign needs a forced re-render
-            setLoopTrigger(t => t + 1);
-        } else {
-            setCurrentIndex(0);
-        }
+          setCurrentIndex(0);
       }
     } else {
       // Go to next item in the same campaign
       setCurrentIndex(prev => prev + 1);
     }
-  }, [campaign, campaigns, currentIndex, id, router, settings.autoplayAll]);
+  }, [campaign, currentIndex]);
 
   
   // Consolidated playback logic
@@ -120,48 +105,33 @@ export default function PlayPage() {
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     const videoElement = videoRef.current;
-    let playVideo: () => void;
 
-    if (videoElement) {
-        videoElement.onended = null;
-        videoElement.onerror = null;
-        videoElement.removeEventListener('canplaythrough', playVideo);
-    }
+    const handleVideoEnd = () => {
+      goToNext();
+    };
+
+    const handleVideoError = () => {
+      // Silently skip to next item on error
+      goToNext();
+    };
 
     if (currentItem.type === 'image') {
       timeoutRef.current = setTimeout(goToNext, settings.defaultImageDuration * 1000);
     }
 
     if (currentItem.type === 'video' && videoElement) {
-      videoElement.loop = false;
-      
-      const handleVideoEnd = () => {
-        goToNext();
-      };
-      
-      const handleVideoError = () => {
-        goToNext();
-      };
-      
-      playVideo = () => {
-        videoElement.muted = true;
-        const playPromise = videoElement.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(handleVideoError);
-        }
-      };
-
-      videoElement.addEventListener('canplaythrough', playVideo, { once: true });
       videoElement.onended = handleVideoEnd;
       videoElement.onerror = handleVideoError;
       
-      videoElement.load();
+      const playPromise = videoElement.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(handleVideoError);
+      }
     }
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (videoElement && playVideo) {
-        videoElement.removeEventListener('canplaythrough', playVideo);
+      if (videoElement) {
         videoElement.onended = null;
         videoElement.onerror = null;
       }
@@ -191,7 +161,8 @@ export default function PlayPage() {
             fill
             style={{ 
               objectFit: 'cover', 
-              display: currentItem?.type === 'image' ? 'block' : 'none' 
+              opacity: currentItem?.type === 'image' ? 1 : 0,
+              transition: 'opacity 0.5s ease-in-out',
             }}
             priority
             unoptimized
@@ -202,8 +173,12 @@ export default function PlayPage() {
             src={(currentItem?.type === 'video' && currentUrl) ? currentUrl : undefined}
             playsInline
             muted
+            autoPlay
             className="w-full h-full object-cover"
-            style={{ display: currentItem?.type === 'video' ? 'block' : 'none' }}
+            style={{ 
+              opacity: currentItem?.type === 'video' ? 1 : 0,
+              transition: 'opacity 0.5s ease-in-out',
+            }}
             disableRemotePlayback
         />
       </div>
