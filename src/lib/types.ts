@@ -15,6 +15,6 @@ export type Orientation = 'landscape' | 'reverse-landscape' | 'portrait' | 'reve
 
 export interface AppSettings {
   orientation: Orientation;
-  startupCampaignId: string | null;
+  autoplayAll: boolean;
   defaultImageDuration: number;
 }

@@ -9,25 +9,13 @@ import Clock from '@/components/Clock';
 import CampaignCard from '@/components/CampaignCard';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
-import { useEffect, useRef } from 'react';
 
 export default function Home() {
   const router = useRouter();
   const { campaigns, addCampaign, deleteCampaign, loaded: campaignsLoaded } = useCampaigns();
   const { settings, loaded: settingsLoaded } = useSettings();
-  const hasRedirected = useRef(false);
 
   const loaded = campaignsLoaded && settingsLoaded;
-  
-  const playTargetId = settings.startupCampaignId ?? campaigns[0]?.id;
-
-  useEffect(() => {
-    if (loaded && settings.startupCampaignId && !hasRedirected.current) {
-        hasRedirected.current = true;
-        router.push(`/campaigns/${settings.startupCampaignId}/play`);
-    }
-  }, [loaded, settings.startupCampaignId, router]);
-
 
   const handleAddCampaign = async () => {
     const newCampaign = await addCampaign();
@@ -37,22 +25,10 @@ export default function Home() {
   };
 
   const handlePlayCampaign = () => {
-    if (playTargetId) {
-      router.push(`/campaigns/${playTargetId}/play`);
+    if (campaigns.length > 0) {
+      router.push(`/campaigns/${campaigns[0].id}/play`);
     }
   };
-
-  if (loaded && settings.startupCampaignId && !hasRedirected.current) {
-    return (
-        <div className="bg-background flex flex-col items-center justify-center h-screen w-screen">
-             <div className="flex flex-col items-center justify-center gap-4">
-                <CybimLogo className="w-16 h-16" />
-                <p className="text-lg text-muted-foreground/80 mt-1">Starting campaign...</p>
-            </div>
-        </div>
-    );
-  }
-
 
   return (
     <div className="flex flex-col min-h-screen p-8 lg:p-12">
@@ -93,11 +69,11 @@ export default function Home() {
             variant="outline"
             size="lg"
             className="h-12 text-base"
-            disabled={!playTargetId}
+            disabled={campaigns.length === 0}
             onClick={handlePlayCampaign}
           >
             <Play className="mr-2 h-5 w-5" />
-            Play Campaigns
+            {settings.autoplayAll ? 'Play All Campaigns' : 'Play First Campaign'}
           </Button>
         </div>
 

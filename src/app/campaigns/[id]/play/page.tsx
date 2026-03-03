@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
@@ -31,6 +31,7 @@ export default function PlayPage() {
       if (foundCampaign) {
         setCampaign(foundCampaign);
       } else {
+        // If campaign not found, go home. Could happen if it was deleted.
         router.push('/');
       }
     }
@@ -62,8 +63,8 @@ export default function PlayPage() {
       if (event.key === 'Escape' || event.key === 'Back') {
         event.preventDefault();
         
-        if (settings.startupCampaignId === id) {
-          updateSettings({ startupCampaignId: null });
+        if (settings.autoplayAll) {
+          updateSettings({ autoplayAll: false });
         }
         
         router.push('/');
@@ -75,18 +76,43 @@ export default function PlayPage() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [router, id, settings.startupCampaignId, updateSettings]);
+  }, [router, settings.autoplayAll, updateSettings]);
+  
+  const goToNext = useCallback(() => {
+    if (!campaign || !campaigns || campaigns.length === 0) return;
+  
+    const isLastItem = currentIndex === campaign.media.length - 1;
+  
+    if (isLastItem) {
+      if (settings.autoplayAll) {
+        const currentCampaignIndex = campaigns.findIndex(c => c.id === id);
+        if (currentCampaignIndex === -1) {
+          // Should not happen, but as a fallback, loop the current campaign
+          setCurrentIndex(0);
+          return;
+        }
+        const nextCampaignIndex = (currentCampaignIndex + 1) % campaigns.length;
+        const nextCampaign = campaigns[nextCampaignIndex];
+        router.push(`/campaigns/${nextCampaign.id}/play`);
+      } else {
+        // Loop current campaign
+        setCurrentIndex(0);
+      }
+    } else {
+      // Go to next item in the same campaign
+      setCurrentIndex(prev => prev + 1);
+    }
+  }, [campaign, campaigns, currentIndex, id, router, settings.autoplayAll]);
+
   
   // Consolidated playback logic
   useEffect(() => {
     if (!currentItem || !campaign || !currentUrl) return;
 
-    const goToNext = () => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % campaign.media.length);
-    };
-    
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     const videoElement = videoRef.current;
+    let playVideo: () => void;
+
     if (videoElement) {
         videoElement.onended = null;
         videoElement.onerror = null;
@@ -97,40 +123,42 @@ export default function PlayPage() {
     }
 
     if (currentItem.type === 'video' && videoElement) {
-      const isSingleMediaCampaign = campaign.media.length === 1;
-      videoElement.loop = isSingleMediaCampaign;
-
-      const handleVideoEnd = () => {
-        if (!isSingleMediaCampaign) {
-            goToNext();
-        }
-      };
+      videoElement.loop = false; // Never loop single video, rely on goToNext
       
-      const handleVideoError = (e: Event | string) => {
-        // Silently skip to next.
+      const handleVideoEnd = () => {
         goToNext();
       };
       
-      const playVideo = () => {
+      const handleVideoError = () => {
+        goToNext();
+      };
+      
+      playVideo = () => {
         videoElement.muted = true;
         const playPromise = videoElement.play();
         if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            handleVideoError(error.toString());
-          });
+          playPromise.catch(handleVideoError);
         }
       };
 
+      videoElement.addEventListener('canplay', playVideo);
       videoElement.onended = handleVideoEnd;
       videoElement.onerror = handleVideoError;
       
-      playVideo();
+      if (videoElement.readyState >= 3) {
+          playVideo();
+      }
     }
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (videoElement && playVideo) {
+        videoElement.removeEventListener('canplay', playVideo);
+        videoElement.onended = null;
+        videoElement.onerror = null;
+      }
     };
-  }, [currentItem, currentUrl, campaign, settings.defaultImageDuration]);
+  }, [currentItem, currentUrl, campaign, settings.defaultImageDuration, goToNext]);
   
   if (!loaded || !campaign) {
     return <div className="bg-black flex items-center justify-center h-screen w-screen text-white" />;

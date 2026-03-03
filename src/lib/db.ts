@@ -2,7 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Campaign, AppSettings } from '@/lib/types';
 
 const DB_NAME = 'cybim-db';
-const DB_VERSION = 3; // Bump version to trigger upgrade for new data structure
+const DB_VERSION = 4; // Bump version to migrate settings
 const CAMPAIGNS_STORE = 'campaigns';
 const SETTINGS_STORE = 'settings';
 const SETTINGS_KEY = 'app-settings';
@@ -27,18 +27,17 @@ function getDb() {
   if (!dbPromise) {
     dbPromise = openDB<CybimDB>(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {
-        // If upgrading from a version before 3, clear out the old object stores
-        // to prevent issues with incompatible data structures (e.g. url -> blob).
         if (oldVersion > 0 && oldVersion < 3) {
           if (db.objectStoreNames.contains(CAMPAIGNS_STORE)) {
             db.deleteObjectStore(CAMPAIGNS_STORE);
           }
+        }
+         if (oldVersion > 0 && oldVersion < 4) {
           if (db.objectStoreNames.contains(SETTINGS_STORE)) {
             db.deleteObjectStore(SETTINGS_STORE);
           }
         }
 
-        // Create stores if they don't exist
         if (!db.objectStoreNames.contains(CAMPAIGNS_STORE)) {
             db.createObjectStore(CAMPAIGNS_STORE, { keyPath: 'id' });
         }
@@ -76,29 +75,25 @@ export async function deleteCampaignFromDb(id: string): Promise<void> {
 // Settings Functions
 const DEFAULTS: AppSettings = {
   orientation: 'landscape',
-  startupCampaignId: null,
+  autoplayAll: false,
   defaultImageDuration: 10,
 };
 
 export async function getSettingsFromDb(): Promise<AppSettings> {
   const db = await getDb();
   if (!db) return DEFAULTS; // Return defaults on server
-  const settings = await db.get(SETTINGS_STORE, SETTINGS_KEY);
-  // Defensively ensure settings is an object before spreading
-  const cleanSettings = (typeof settings === 'object' && settings !== null) ? settings : {};
-
-  // Simple migration from old settings structure
-  if ('startOnBoot' in cleanSettings) {
-    delete (cleanSettings as any).startOnBoot;
-  }
-  if ('lastPlayedCampaignId' in cleanSettings) {
-     if (!('startupCampaignId' in cleanSettings) || cleanSettings.startupCampaignId === null) {
-        (cleanSettings as any).startupCampaignId = (cleanSettings as any).lastPlayedCampaignId;
+  let settings = await db.get(SETTINGS_STORE, SETTINGS_KEY);
+  
+  // Clean up old properties if they exist from previous versions
+  if (settings && typeof settings === 'object') {
+     if ('startupCampaignId' in settings) {
+      delete (settings as any).startupCampaignId;
     }
-    delete (cleanSettings as any).lastPlayedCampaignId;
+  } else {
+    settings = {};
   }
-
-  return { ...DEFAULTS, ...cleanSettings };
+ 
+  return { ...DEFAULTS, ...settings };
 }
 
 export async function saveSettingsToDb(settings: AppSettings): Promise<void> {
