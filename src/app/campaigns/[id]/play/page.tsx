@@ -93,7 +93,7 @@ export default function PlayPage() {
     if (videoElement) {
         videoElement.onended = null;
         videoElement.onerror = null;
-        videoElement.oncanplay = null; // Clean up previous listener
+        videoElement.oncanplaythrough = null; // Clean up previous listener
     }
 
     if (currentItem.type === 'image') {
@@ -112,7 +112,6 @@ export default function PlayPage() {
       
       const handleVideoError = (e: Event | string) => {
         // Fix for the reported console error
-        console.error("Video playback error, skipping.");
         toast({ variant: 'destructive', title: 'Playback Error', description: 'Could not play video file.' });
         goToNext();
       };
@@ -131,13 +130,10 @@ export default function PlayPage() {
       videoElement.onended = handleVideoEnd;
       videoElement.onerror = handleVideoError;
       
-      // 'oncanplay' fires when the browser can start playing, which is often
-      // sooner than 'oncanplaythrough'. This can help start faster.
-      videoElement.oncanplay = playVideo;
+      videoElement.oncanplaythrough = playVideo;
 
-      // In some cases, 'oncanplay' may have already fired before the listener
-      // was attached. Check the readyState and play if ready.
-      if (videoElement.readyState >= 3) { // HAVE_FUTURE_DATA
+      // In some cases, 'oncanplaythrough' may have already fired. Check the readyState.
+      if (videoElement.readyState >= 4) { // HAVE_ENOUGH_DATA
         playVideo();
       }
     }
