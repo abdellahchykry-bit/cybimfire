@@ -46,7 +46,9 @@ export default function PlayPage() {
         const objectUrl = URL.createObjectURL(currentItem.blob);
         setCurrentUrl(objectUrl);
         return () => {
-            URL.revokeObjectURL(objectUrl);
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
             setCurrentUrl(null);
         };
     }
@@ -100,7 +102,11 @@ export default function PlayPage() {
       const isSingleMediaCampaign = campaign.media.length === 1;
       videoElement.loop = isSingleMediaCampaign;
 
-      const handleVideoEnd = () => goToNext();
+      const handleVideoEnd = () => {
+        if (!isSingleMediaCampaign) {
+            goToNext();
+        }
+      };
       const handleVideoError = (e: Event | string) => {
         console.error("Video playback error, skipping.", e);
         toast({ variant: 'destructive', title: 'Playback Error', description: 'Could not play video file.' });
@@ -108,20 +114,16 @@ export default function PlayPage() {
       };
       
       const playVideo = () => {
-        // Explicitly mute before playing for maximum compatibility.
-        videoElement.muted = true;
         const playPromise = videoElement.play();
         if (playPromise !== undefined) {
           playPromise.catch(error => {
             console.error("Video autoplay was prevented.", error);
-            handleVideoError(error as any);
+            // Don't call handleVideoError here, as some browsers throw errors for muted autoplay which is fine.
           });
         }
       };
 
-      if (!isSingleMediaCampaign) {
-        videoElement.onended = handleVideoEnd;
-      }
+      videoElement.onended = handleVideoEnd;
       videoElement.onerror = handleVideoError;
       
       if (videoElement.readyState >= 4) { // HAVE_ENOUGH_DATA
@@ -151,7 +153,7 @@ export default function PlayPage() {
 
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
-      <div key={currentItem?.id} className="w-full h-full">
+      <div className="w-full h-full">
         {currentItem?.type === 'image' && currentUrl && (
           <Image
             key={currentUrl}
