@@ -18,7 +18,7 @@ export default function PlayPage() {
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loopTrigger, setLoopTrigger] = useState(0); // For single-item campaign loops
+  const [loopTrigger, setLoopTrigger] = useState(0); 
 
   const [activeUrl, setActiveUrl] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<MediaItem | null>(null);
@@ -45,7 +45,7 @@ export default function PlayPage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' || event.key === 'Back') {
         event.preventDefault();
-        router.push('/'); // Simplified: just go home
+        router.push('/'); 
       }
     };
 
@@ -58,8 +58,6 @@ export default function PlayPage() {
     
     setCurrentIndex(prev => {
       const nextIndex = (prev + 1) % campaign.media.length;
-      // If there's only one item, the index won't change.
-      // We need to trigger the effect manually to re-play the item.
       if (prev === nextIndex) {
         setLoopTrigger(t => t + 1);
       }
@@ -70,7 +68,6 @@ export default function PlayPage() {
   // Main playback logic effect
   useEffect(() => {
     if (!campaign || campaign.media.length === 0) {
-      // If a campaign becomes empty while playing, go back.
       if (campaign) router.push('/');
       return;
     };
@@ -79,8 +76,8 @@ export default function PlayPage() {
     if (!item) return;
 
     // --- Stop any previous playback ---
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     const videoElement = videoRef.current;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (videoElement) {
         videoElement.onended = null;
         videoElement.onerror = null;
@@ -93,15 +90,24 @@ export default function PlayPage() {
     
     // --- Start new playback ---
     if (item.type === 'image') {
-      timeoutRef.current = setTimeout(goToNext, settings.defaultImageDuration * 1000);
+      timeoutRef.current = setTimeout(goToNext, item.duration * 1000);
     } else if (item.type === 'video' && videoElement) {
-      videoElement.src = objectUrl;
       videoElement.onended = goToNext;
       videoElement.onerror = goToNext; // Silently skip on error
+      videoElement.src = objectUrl;
       
+      // Muted autoplay workaround for webviews
+      videoElement.muted = true; 
       const playPromise = videoElement.play();
+      
       if (playPromise !== undefined) {
-        playPromise.catch(goToNext);
+        playPromise.then(() => {
+            // Unmute once playback has started.
+            videoElement.muted = false;
+        }).catch(err => {
+            // If even muted autoplay fails, just skip.
+            goToNext();
+        });
       }
     }
 
@@ -110,7 +116,7 @@ export default function PlayPage() {
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [currentIndex, loopTrigger, campaign, settings.defaultImageDuration, goToNext, router]);
+  }, [currentIndex, loopTrigger, campaign, goToNext, router]);
   
   if (!loaded || !campaign) {
     return <div className="bg-black flex items-center justify-center h-screen w-screen" />;

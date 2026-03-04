@@ -48,32 +48,47 @@ export default function PlayAllPage() {
   }, [router, updateSettings]);
 
   const goToNext = useCallback(() => {
-    if (!loaded || campaigns.length === 0) return;
+    if (!loaded) return;
 
-    let nextMediaIndex = activeMediaIndex + 1;
-    let nextCampaignIndex = activeCampaignIndex;
-
-    const currentCampaign = campaigns[nextCampaignIndex];
-    if (!currentCampaign || currentCampaign.media.length === 0) {
-        // Skip empty or invalid campaign
-        setActiveCampaignIndex(prev => (prev + 1) % campaigns.length);
-        setActiveMediaIndex(0);
-        return;
+    const playableCampaigns = campaigns.filter(c => c.media.length > 0);
+    if (playableCampaigns.length === 0) {
+      router.push('/');
+      return;
     }
 
-    if (nextMediaIndex >= currentCampaign.media.length) {
-      nextMediaIndex = 0;
-      nextCampaignIndex = (activeCampaignIndex + 1) % campaigns.length;
+    let currentCampaign = campaigns[activeCampaignIndex];
+    
+    // Find the actual current campaign in the playable list
+    let currentPlayableIndex = playableCampaigns.findIndex(c => c.id === currentCampaign?.id);
+    if (currentPlayableIndex === -1) {
+        currentPlayableIndex = 0;
     }
     
+    let nextMediaIndex = activeMediaIndex + 1;
+    let nextPlayableIndex = currentPlayableIndex;
+
+    if (nextMediaIndex >= playableCampaigns[currentPlayableIndex].media.length) {
+      nextMediaIndex = 0;
+      nextPlayableIndex = (currentPlayableIndex + 1) % playableCampaigns.length;
+    }
+    
+    const nextCampaignId = playableCampaigns[nextPlayableIndex].id;
+    const nextOriginalIndex = campaigns.findIndex(c => c.id === nextCampaignId);
+
     setActiveMediaIndex(nextMediaIndex);
-    setActiveCampaignIndex(nextCampaignIndex);
-  }, [campaigns, activeCampaignIndex, activeMediaIndex, loaded]);
+    setActiveCampaignIndex(nextOriginalIndex);
+  }, [campaigns, activeCampaignIndex, activeMediaIndex, loaded, router]);
 
 
   // Main playback logic effect
   useEffect(() => {
-    if (!loaded || campaigns.length === 0) return;
+    if (!loaded) return;
+    
+    const playableCampaigns = campaigns.filter(c => c.media.length > 0);
+    if (playableCampaigns.length === 0) {
+        if(campaignsLoaded) router.push('/');
+        return;
+    }
     
     const campaign = campaigns[activeCampaignIndex];
     if (!campaign || campaign.media.length === 0) {
@@ -83,13 +98,13 @@ export default function PlayAllPage() {
 
     const item = campaign.media[activeMediaIndex];
     if (!item) {
-        goToNext(); // Skip if item is somehow invalid
+        goToNext(); 
         return;
     };
 
     // --- Stop any previous playback ---
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     const videoElement = videoRef.current;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (videoElement) {
         videoElement.onended = null;
         videoElement.onerror = null;
@@ -102,15 +117,24 @@ export default function PlayAllPage() {
     
     // --- Start new playback ---
     if (item.type === 'image') {
-      timeoutRef.current = setTimeout(goToNext, settings.defaultImageDuration * 1000);
+      timeoutRef.current = setTimeout(goToNext, item.duration * 1000);
     } else if (item.type === 'video' && videoElement) {
-      videoElement.src = objectUrl;
       videoElement.onended = goToNext;
       videoElement.onerror = goToNext; // Silently skip on error
-      
+      videoElement.src = objectUrl;
+
+       // Muted autoplay workaround for webviews
+      videoElement.muted = true;
       const playPromise = videoElement.play();
+
       if (playPromise !== undefined) {
-        playPromise.catch(goToNext);
+        playPromise.then(() => {
+            // Unmute once playback has started.
+            videoElement.muted = false;
+        }).catch(err => {
+            // If even muted autoplay fails, just skip.
+            goToNext();
+        });
       }
     }
 
@@ -119,16 +143,16 @@ export default function PlayAllPage() {
             URL.revokeObjectURL(objectUrl);
         }
     };
-  }, [activeCampaignIndex, activeMediaIndex, loaded, campaigns, settings.defaultImageDuration, goToNext]);
+  }, [activeCampaignIndex, activeMediaIndex, loaded, campaigns, goToNext, router, campaignsLoaded]);
   
   if (!loaded) {
     return <div className="bg-black flex items-center justify-center h-screen w-screen" />;
   }
 
-  if (campaigns.length === 0) {
+  if (campaigns.filter(c => c.media.length > 0).length === 0 && loaded) {
     return (
         <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
-            <p>There are no campaigns to play.</p>
+            <p>There are no campaigns with media to play.</p>
             <button onClick={() => router.push('/')} className="px-4 py-2 border rounded">Go Back</button>
         </div>
     );
