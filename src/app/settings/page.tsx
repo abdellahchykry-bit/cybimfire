@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { ArrowLeft, ScreenShare } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
+import { useCampaigns } from '@/context/CampaignsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type Orientation = 'landscape' | 'reverse-landscape' | 'portrait' | 'reverse-portrait';
 
@@ -21,8 +22,11 @@ const durationOptions = [5, 10, 15, 20, 30, 60];
 
 export default function SettingsPage() {
   const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
+  const { campaigns, loaded: campaignsLoaded } = useCampaigns();
+
+  const loaded = settingsLoaded && campaignsLoaded;
   
-  if (!settingsLoaded) {
+  if (!loaded) {
     return <div className="flex items-center justify-center min-h-screen">Loading settings...</div>;
   }
 
@@ -83,18 +87,27 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-4">
             <h3 className="text-xl font-headline">Playback</h3>
-            <div className="flex items-center justify-between rounded-lg border p-6">
-                <div>
-                    <Label htmlFor="autoplay-all" className="text-base font-medium">Autoplay All Campaigns</Label>
-                    <p className="text-sm text-muted-foreground pt-1">
-                        When enabled, all campaigns will play one after another in a loop.
+            <div className="rounded-lg border p-6">
+                <div className="space-y-2">
+                    <Label htmlFor="startup-campaign" className="text-base font-medium">Auto-start on Launch</Label>
+                    <p className="text-sm text-muted-foreground pt-1 pb-2">
+                        Choose a campaign to play automatically when the application starts.
                     </p>
                 </div>
-              <Switch
-                id="autoplay-all"
-                checked={settings.autoplayAll}
-                onCheckedChange={(checked) => updateSettings({ autoplayAll: checked })}
-              />
+              <Select
+                value={settings.startupCampaignId ?? 'none'}
+                onValueChange={(value) => updateSettings({ startupCampaignId: value === 'none' ? null : value })}
+              >
+                <SelectTrigger id="startup-campaign" className="w-full md:w-[300px]">
+                  <SelectValue placeholder="Select campaign..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {campaigns.map(campaign => (
+                    <SelectItem key={campaign.id} value={campaign.id}>{campaign.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>

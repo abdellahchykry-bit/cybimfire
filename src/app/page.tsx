@@ -13,7 +13,7 @@ import { useSettings } from '@/context/SettingsContext';
 export default function Home() {
   const router = useRouter();
   const { campaigns, addCampaign, deleteCampaign, loaded: campaignsLoaded } = useCampaigns();
-  const { settings, loaded: settingsLoaded } = useSettings();
+  const { loaded: settingsLoaded } = useSettings();
 
   const loaded = campaignsLoaded && settingsLoaded;
 
@@ -73,7 +73,7 @@ export default function Home() {
             onClick={handlePlayCampaign}
           >
             <Play className="mr-2 h-5 w-5" />
-            {settings.autoplayAll ? "Play All Campaigns" : "Play Campaigns"}
+            Play First Campaign
           </Button>
         </div>
 
