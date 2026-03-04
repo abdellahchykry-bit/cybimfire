@@ -13,7 +13,7 @@ import { useSettings } from '@/context/SettingsContext';
 export default function Home() {
   const router = useRouter();
   const { campaigns, addCampaign, deleteCampaign, loaded: campaignsLoaded } = useCampaigns();
-  const { loaded: settingsLoaded } = useSettings();
+  const { settings, loaded: settingsLoaded } = useSettings();
 
   const loaded = campaignsLoaded && settingsLoaded;
 
@@ -25,7 +25,11 @@ export default function Home() {
   };
 
   const handlePlayCampaign = () => {
-    if (campaigns.length > 0) {
+    if (campaigns.length === 0) return;
+
+    if (settings.autoplayAll) {
+      router.push('/campaigns/play-all');
+    } else {
       router.push(`/campaigns/${campaigns[0].id}/play`);
     }
   };
@@ -73,7 +77,7 @@ export default function Home() {
             onClick={handlePlayCampaign}
           >
             <Play className="mr-2 h-5 w-5" />
-            Play First Campaign
+            {settings.autoplayAll ? "Start Autoplay" : "Play First Campaign"}
           </Button>
         </div>
 

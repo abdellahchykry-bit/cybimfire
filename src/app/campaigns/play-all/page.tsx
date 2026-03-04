@@ -1,82 +1,91 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useCampaigns } from '@/context/CampaignsContext';
 import { useSettings } from '@/context/SettingsContext';
-import type { Campaign, MediaItem } from '@/lib/types';
+import type { MediaItem } from '@/lib/types';
 
 const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
-export default function PlayPage() {
-  const params = useParams();
-  const id = params.id as string;
+export default function PlayAllPage() {
   const router = useRouter();
-  const { getCampaignById, loaded: campaignsLoaded } = useCampaigns();
-  const { settings, loaded: settingsLoaded } = useSettings();
+  const { campaigns, loaded: campaignsLoaded } = useCampaigns();
+  const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
   
-  const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loopTrigger, setLoopTrigger] = useState(0); // For single-item campaign loops
-
+  const [activeCampaignIndex, setActiveCampaignIndex] = useState(0);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  
   const [activeUrl, setActiveUrl] = useState<string | null>(null);
   const [activeItem, setActiveItem] = useState<MediaItem | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const backButtonHandlerAttached = useRef(false);
 
   const loaded = campaignsLoaded && settingsLoaded;
 
-  // Load campaign data
+  // Back button handler with special logic for this mode
   useEffect(() => {
-    if (loaded) {
-      const foundCampaign = getCampaignById(id);
-      if (foundCampaign) {
-        setCampaign(foundCampaign);
-      } else {
-        router.push('/');
-      }
-    }
-  }, [id, loaded, getCampaignById, router]);
-  
-  // Back button handler
-  useEffect(() => {
+    if (backButtonHandlerAttached.current) return;
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' || event.key === 'Back') {
         event.preventDefault();
-        router.push('/'); // Simplified: just go home
+        updateSettings({ autoplayAll: false });
+        router.push('/');
       }
     };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [router]);
-  
-  const goToNext = useCallback(() => {
-    if (!campaign || campaign.media.length === 0) return;
     
-    setCurrentIndex(prev => {
-      const nextIndex = (prev + 1) % campaign.media.length;
-      // If there's only one item, the index won't change.
-      // We need to trigger the effect manually to re-play the item.
-      if (prev === nextIndex) {
-        setLoopTrigger(t => t + 1);
-      }
-      return nextIndex;
-    });
-  }, [campaign]);
+    window.addEventListener('keydown', handleKeyDown);
+    backButtonHandlerAttached.current = true;
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      backButtonHandlerAttached.current = false;
+    };
+  }, [router, updateSettings]);
+
+  const goToNext = useCallback(() => {
+    if (!loaded || campaigns.length === 0) return;
+
+    let nextMediaIndex = activeMediaIndex + 1;
+    let nextCampaignIndex = activeCampaignIndex;
+
+    const currentCampaign = campaigns[nextCampaignIndex];
+    if (!currentCampaign || currentCampaign.media.length === 0) {
+        // Skip empty or invalid campaign
+        setActiveCampaignIndex(prev => (prev + 1) % campaigns.length);
+        setActiveMediaIndex(0);
+        return;
+    }
+
+    if (nextMediaIndex >= currentCampaign.media.length) {
+      nextMediaIndex = 0;
+      nextCampaignIndex = (activeCampaignIndex + 1) % campaigns.length;
+    }
+    
+    setActiveMediaIndex(nextMediaIndex);
+    setActiveCampaignIndex(nextCampaignIndex);
+  }, [campaigns, activeCampaignIndex, activeMediaIndex, loaded]);
+
 
   // Main playback logic effect
   useEffect(() => {
-    if (!campaign || campaign.media.length === 0) {
-      // If a campaign becomes empty while playing, go back.
-      if (campaign) router.push('/');
-      return;
-    };
+    if (!loaded || campaigns.length === 0) return;
     
-    const item = campaign.media[currentIndex];
-    if (!item) return;
+    const campaign = campaigns[activeCampaignIndex];
+    if (!campaign || campaign.media.length === 0) {
+        goToNext();
+        return;
+    };
+
+    const item = campaign.media[activeMediaIndex];
+    if (!item) {
+        goToNext(); // Skip if item is somehow invalid
+        return;
+    };
 
     // --- Stop any previous playback ---
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -106,20 +115,20 @@ export default function PlayPage() {
     }
 
     return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
+        if(objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+        }
     };
-  }, [currentIndex, loopTrigger, campaign, settings.defaultImageDuration, goToNext, router]);
+  }, [activeCampaignIndex, activeMediaIndex, loaded, campaigns, settings.defaultImageDuration, goToNext]);
   
-  if (!loaded || !campaign) {
+  if (!loaded) {
     return <div className="bg-black flex items-center justify-center h-screen w-screen" />;
   }
 
-  if (campaign.media.length === 0) {
+  if (campaigns.length === 0) {
     return (
         <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
-            <p>This campaign has no media.</p>
+            <p>There are no campaigns to play.</p>
             <button onClick={() => router.push('/')} className="px-4 py-2 border rounded">Go Back</button>
         </div>
     );
@@ -129,7 +138,7 @@ export default function PlayPage() {
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="w-full h-full">
         <Image
-            key={currentIndex + '-img' + loopTrigger}
+            key={`${activeCampaignIndex}-${activeMediaIndex}-img`}
             src={(activeItem?.type === 'image' && activeUrl) ? activeUrl : BLANK_IMAGE}
             alt=""
             fill
@@ -142,7 +151,7 @@ export default function PlayPage() {
             unoptimized
         />
         <video
-            key={currentIndex + '-vid' + loopTrigger}
+            key={`${activeCampaignIndex}-${activeMediaIndex}-vid`}
             ref={videoRef}
             playsInline
             disableRemotePlayback

@@ -1,35 +1,26 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import SplashScreen from '@/components/SplashScreen';
 import { useSettings } from '@/context/SettingsContext';
 import { useCampaigns } from '@/context/CampaignsContext';
 
 export default function SplashHandler({ children }: { children: React.ReactNode }) {
     const [isReady, setIsReady] = useState(false);
-    const { settings, loaded: settingsLoaded } = useSettings();
+    const { loaded: settingsLoaded } = useSettings();
     const { loaded: campaignsLoaded } = useCampaigns();
-    const router = useRouter();
-    const startupAttempted = useRef(false);
 
     useEffect(() => {
         const dataLoaded = settingsLoaded && campaignsLoaded;
-        if (!dataLoaded || startupAttempted.current) return;
-
-        startupAttempted.current = true;
+        if (!dataLoaded) return;
 
         const timer = setTimeout(() => {
-            if (settings.startupCampaignId) {
-                router.replace(`/campaigns/${settings.startupCampaignId}/play`);
-            } else {
-                setIsReady(true);
-            }
-        }, 2000); // Wait 2 seconds before deciding what to do
+            setIsReady(true);
+        }, 2000); // Always wait 2 seconds before showing the main app
 
         return () => clearTimeout(timer);
 
-    }, [settingsLoaded, campaignsLoaded, settings, router]);
+    }, [settingsLoaded, campaignsLoaded]);
 
     return isReady ? <>{children}</> : <SplashScreen />;
 }
