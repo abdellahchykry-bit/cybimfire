@@ -12,7 +12,7 @@ const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAAL
 export default function PlayAllPage() {
   const router = useRouter();
   const { campaigns, loaded: campaignsLoaded } = useCampaigns();
-  const { loaded: settingsLoaded } = useSettings();
+  const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
   
   const [activeCampaignIndex, setActiveCampaignIndex] = useState(0);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
@@ -22,29 +22,8 @@ export default function PlayAllPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const backButtonHandlerAttached = useRef(false);
 
   const loaded = campaignsLoaded && settingsLoaded;
-
-  // Back button handler with special logic for this mode
-  useEffect(() => {
-    if (backButtonHandlerAttached.current) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' || event.key === 'Back') {
-        event.preventDefault();
-        router.push('/');
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    backButtonHandlerAttached.current = true;
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      backButtonHandlerAttached.current = false;
-    };
-  }, [router]);
 
   const goToNext = useCallback(() => {
     if (!loaded) return;
@@ -81,7 +60,7 @@ export default function PlayAllPage() {
     const nextOriginalIndex = campaigns.findIndex(c => c.id === nextCampaignId);
 
     setActiveMediaIndex(nextMediaIndex);
-    setActiveCampaignIndex(nextOriginalIndex);
+    setActiveCampaignIndex(nextOriginalIndex >= 0 ? nextOriginalIndex : 0);
   }, [campaigns, activeCampaignIndex, activeMediaIndex, loaded, router]);
 
 
@@ -164,7 +143,7 @@ export default function PlayAllPage() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
+    <div onDoubleClick={(e) => e.preventDefault()} className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="w-full h-full">
         <Image
             src={(activeItem?.type === 'image' && activeUrl) ? activeUrl : BLANK_IMAGE}

@@ -40,19 +40,6 @@ export default function PlayPage() {
     }
   }, [id, loaded, getCampaignById, router]);
   
-  // Back button handler
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' || event.key === 'Back') {
-        event.preventDefault();
-        router.push('/'); 
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [router]);
-  
   const goToNext = useCallback(() => {
     if (!campaign || campaign.media.length === 0) return;
     
@@ -132,7 +119,7 @@ export default function PlayPage() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
+    <div onDoubleClick={(e) => e.preventDefault()} className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="w-full h-full">
         <Image
             src={(activeItem?.type === 'image' && activeUrl) ? activeUrl : BLANK_IMAGE}
