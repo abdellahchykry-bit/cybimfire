@@ -12,7 +12,7 @@ const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAAL
 export default function PlayAllPage() {
   const router = useRouter();
   const { campaigns, loaded: campaignsLoaded } = useCampaigns();
-  const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
+  const { loaded: settingsLoaded } = useSettings();
   
   const [activeCampaignIndex, setActiveCampaignIndex] = useState(0);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
@@ -33,7 +33,6 @@ export default function PlayAllPage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' || event.key === 'Back') {
         event.preventDefault();
-        updateSettings({ autoplayAll: false });
         router.push('/');
       }
     };
@@ -45,7 +44,7 @@ export default function PlayAllPage() {
       window.removeEventListener('keydown', handleKeyDown);
       backButtonHandlerAttached.current = false;
     };
-  }, [router, updateSettings]);
+  }, [router]);
 
   const goToNext = useCallback(() => {
     if (!loaded) return;
@@ -56,18 +55,24 @@ export default function PlayAllPage() {
       return;
     }
 
-    let currentCampaign = campaigns[activeCampaignIndex];
+    let currentCampaign = playableCampaigns.find(c => c.id === campaigns[activeCampaignIndex]?.id);
     
     // Find the actual current campaign in the playable list
     let currentPlayableIndex = playableCampaigns.findIndex(c => c.id === currentCampaign?.id);
     if (currentPlayableIndex === -1) {
         currentPlayableIndex = 0;
+        currentCampaign = playableCampaigns[0];
     }
     
+    if (!currentCampaign) {
+      router.push('/');
+      return;
+    }
+
     let nextMediaIndex = activeMediaIndex + 1;
     let nextPlayableIndex = currentPlayableIndex;
 
-    if (nextMediaIndex >= playableCampaigns[currentPlayableIndex].media.length) {
+    if (nextMediaIndex >= currentCampaign.media.length) {
       nextMediaIndex = 0;
       nextPlayableIndex = (currentPlayableIndex + 1) % playableCampaigns.length;
     }
@@ -162,7 +167,6 @@ export default function PlayAllPage() {
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="w-full h-full">
         <Image
-            key={`${activeCampaignIndex}-${activeMediaIndex}-img`}
             src={(activeItem?.type === 'image' && activeUrl) ? activeUrl : BLANK_IMAGE}
             alt=""
             fill
@@ -175,7 +179,6 @@ export default function PlayAllPage() {
             unoptimized
         />
         <video
-            key={`${activeCampaignIndex}-${activeMediaIndex}-vid`}
             ref={videoRef}
             playsInline
             disableRemotePlayback

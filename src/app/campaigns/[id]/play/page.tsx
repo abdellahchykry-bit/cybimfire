@@ -14,7 +14,7 @@ export default function PlayPage() {
   const id = params.id as string;
   const router = useRouter();
   const { getCampaignById, loaded: campaignsLoaded } = useCampaigns();
-  const { settings, loaded: settingsLoaded } = useSettings();
+  const { loaded: settingsLoaded } = useSettings();
   
   const [campaign, setCampaign] = useState<Campaign | undefined>(undefined);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -58,7 +58,7 @@ export default function PlayPage() {
     
     setCurrentIndex(prev => {
       const nextIndex = (prev + 1) % campaign.media.length;
-      if (prev === nextIndex) {
+      if (nextIndex === 0 && prev === campaign.media.length - 1) {
         setLoopTrigger(t => t + 1);
       }
       return nextIndex;
@@ -68,7 +68,7 @@ export default function PlayPage() {
   // Main playback logic effect
   useEffect(() => {
     if (!campaign || campaign.media.length === 0) {
-      if (campaign) router.push('/');
+      if (campaign && loaded) router.push('/');
       return;
     };
     
@@ -116,7 +116,7 @@ export default function PlayPage() {
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [currentIndex, loopTrigger, campaign, goToNext, router]);
+  }, [currentIndex, loopTrigger, campaign, goToNext, router, loaded]);
   
   if (!loaded || !campaign) {
     return <div className="bg-black flex items-center justify-center h-screen w-screen" />;
@@ -135,7 +135,6 @@ export default function PlayPage() {
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="w-full h-full">
         <Image
-            key={currentIndex + '-img' + loopTrigger}
             src={(activeItem?.type === 'image' && activeUrl) ? activeUrl : BLANK_IMAGE}
             alt=""
             fill
@@ -148,7 +147,6 @@ export default function PlayPage() {
             unoptimized
         />
         <video
-            key={currentIndex + '-vid' + loopTrigger}
             ref={videoRef}
             playsInline
             disableRemotePlayback

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { Plus, Settings, Play, Info, Film } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CybimLogo from '@/components/icons/CybimLogo';
@@ -16,6 +17,15 @@ export default function Home() {
   const { settings, loaded: settingsLoaded } = useSettings();
 
   const loaded = campaignsLoaded && settingsLoaded;
+  
+  useEffect(() => {
+    // If autoplay is on and we have campaigns, start playing automatically.
+    // This handles the "auto start on launch" requirement.
+    if (loaded && settings.autoplayAll && campaigns.length > 0) {
+      router.push('/campaigns/play-all');
+    }
+  }, [loaded, settings.autoplayAll, campaigns, router]);
+
 
   const handleAddCampaign = async () => {
     const newCampaign = await addCampaign();
@@ -26,13 +36,19 @@ export default function Home() {
 
   const handlePlayCampaign = () => {
     if (campaigns.length === 0) return;
-
-    if (settings.autoplayAll) {
-      router.push('/campaigns/play-all');
-    } else {
-      router.push(`/campaigns/${campaigns[0].id}/play`);
-    }
+    // This button now always plays the first campaign.
+    // Autoplay is handled on app startup.
+    router.push(`/campaigns/${campaigns[0].id}/play`);
   };
+  
+  // To prevent the home page from flashing while redirecting for autoplay.
+  if (loaded && settings.autoplayAll && campaigns.length > 0) {
+      return (
+          <div className="flex items-center justify-center min-h-screen bg-background">
+              <p className="text-muted-foreground">Starting Autoplay...</p>
+          </div>
+      );
+  }
 
   return (
     <div className="flex flex-col min-h-screen p-8 lg:p-12">
@@ -77,13 +93,13 @@ export default function Home() {
             onClick={handlePlayCampaign}
           >
             <Play className="mr-2 h-5 w-5" />
-            {settings.autoplayAll ? "Start Autoplay" : "Play First Campaign"}
+            Play First Campaign
           </Button>
         </div>
 
         {loaded && campaigns.length > 0 && (
           <div className="w-full">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {campaigns.map((campaign) => (
                 <CampaignCard
                   key={campaign.id}
