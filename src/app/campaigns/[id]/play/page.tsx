@@ -12,7 +12,7 @@ const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAAL
 export default function PlayPage() {
   const params = useParams();
   const id = params.id as string;
-  const router = useRouter();
+  const router = useRouter(); // Keep router for initial navigation checks
   const { getCampaignById, loaded: campaignsLoaded } = useCampaigns();
   const { loaded: settingsLoaded } = useSettings();
   
@@ -28,6 +28,29 @@ export default function PlayPage() {
 
   const loaded = campaignsLoaded && settingsLoaded;
 
+  // Effect to disable back navigation and Escape key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+      }
+    };
+    
+    const handlePopState = () => {
+      history.pushState(null, '', location.href);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    history.pushState(null, '', location.href);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+
   // Load campaign data
   useEffect(() => {
     if (loaded) {
@@ -35,6 +58,8 @@ export default function PlayPage() {
       if (foundCampaign) {
         setCampaign(foundCampaign);
       } else {
+        // If campaign not found, navigate away.
+        // This is necessary for initialization but won't be triggerable by user.
         router.push('/');
       }
     }
@@ -55,7 +80,11 @@ export default function PlayPage() {
   // Main playback logic effect
   useEffect(() => {
     if (!campaign || campaign.media.length === 0) {
-      if (campaign && loaded) router.push('/');
+      if (campaign && loaded) {
+        // This navigation will be blocked by the popstate handler, but
+        // it's a safe fallback in case of an empty campaign.
+        router.push('/');
+      }
       return;
     };
     
@@ -113,7 +142,6 @@ export default function PlayPage() {
     return (
         <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
             <p>This campaign has no media.</p>
-            <button onClick={() => router.push('/')} className="px-4 py-2 border rounded">Go Back</button>
         </div>
     );
   }

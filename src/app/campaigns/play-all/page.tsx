@@ -12,7 +12,7 @@ const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAAL
 export default function PlayAllPage() {
   const router = useRouter();
   const { campaigns, loaded: campaignsLoaded } = useCampaigns();
-  const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
+  const { loaded: settingsLoaded } = useSettings();
   
   const [activeCampaignIndex, setActiveCampaignIndex] = useState(0);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
@@ -24,6 +24,28 @@ export default function PlayAllPage() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const loaded = campaignsLoaded && settingsLoaded;
+
+  // Effect to disable back navigation and Escape key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+      }
+    };
+    
+    const handlePopState = () => {
+      history.pushState(null, '', location.href);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    history.pushState(null, '', location.href);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   const goToNext = useCallback(() => {
     if (!loaded) return;
@@ -137,7 +159,6 @@ export default function PlayAllPage() {
     return (
         <div className="bg-black flex flex-col gap-4 items-center justify-center h-screen w-screen text-white">
             <p>There are no campaigns with media to play.</p>
-            <button onClick={() => router.push('/')} className="px-4 py-2 border rounded">Go Back</button>
         </div>
     );
   }
