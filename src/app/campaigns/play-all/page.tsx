@@ -12,7 +12,7 @@ const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAAL
 export default function PlayAllPage() {
   const router = useRouter();
   const { campaigns, loaded: campaignsLoaded } = useCampaigns();
-  const { loaded: settingsLoaded } = useSettings();
+  const { settings, updateSettings, loaded: settingsLoaded } = useSettings();
   
   const [activeCampaignIndex, setActiveCampaignIndex] = useState(0);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
@@ -25,27 +25,33 @@ export default function PlayAllPage() {
 
   const loaded = campaignsLoaded && settingsLoaded;
 
-  // Effect to disable back navigation and Escape key
+  const handleExit = useCallback(() => {
+    // If autoplay was on, turn it off when exiting.
+    if (settings.autoplayAll) {
+      updateSettings({ autoplayAll: false });
+    }
+    router.push('/');
+  }, [router, settings.autoplayAll, updateSettings]);
+
+  // Effect to handle exit gestures
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        event.preventDefault();
+        handleExit();
       }
     };
     
-    const handlePopState = () => {
-      history.pushState(null, '', location.href);
-    };
-
+    window.addEventListener('popstate', handleExit);
     window.addEventListener('keydown', handleKeyDown);
+
+    // Push a new state to the history so the popstate event fires on back.
     history.pushState(null, '', location.href);
-    window.addEventListener('popstate', handlePopState);
 
     return () => {
+      window.removeEventListener('popstate', handleExit);
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('popstate', handlePopState);
     };
-  }, []);
+  }, [handleExit]);
 
   const goToNext = useCallback(() => {
     if (!loaded) return;
@@ -164,7 +170,7 @@ export default function PlayAllPage() {
   }
 
   return (
-    <div onDoubleClick={(e) => e.preventDefault()} className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
+    <div onDoubleClick={handleExit} className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="w-full h-full">
         <Image
             src={(activeItem?.type === 'image' && activeUrl) ? activeUrl : BLANK_IMAGE}

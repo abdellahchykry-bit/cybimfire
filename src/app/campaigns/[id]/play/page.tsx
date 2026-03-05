@@ -12,7 +12,7 @@ const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAAL
 export default function PlayPage() {
   const params = useParams();
   const id = params.id as string;
-  const router = useRouter(); // Keep router for initial navigation checks
+  const router = useRouter();
   const { getCampaignById, loaded: campaignsLoaded } = useCampaigns();
   const { loaded: settingsLoaded } = useSettings();
   
@@ -28,27 +28,31 @@ export default function PlayPage() {
 
   const loaded = campaignsLoaded && settingsLoaded;
 
-  // Effect to disable back navigation and Escape key
+  const handleExit = useCallback(() => {
+    router.push('/');
+  }, [router]);
+
+  // Effect to handle exit gestures
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        event.preventDefault();
+        handleExit();
       }
     };
     
-    const handlePopState = () => {
-      history.pushState(null, '', location.href);
-    };
-
+    // The popstate event is fired when the active history entry changes.
+    // This is a reliable way to catch the back button.
+    window.addEventListener('popstate', handleExit);
     window.addEventListener('keydown', handleKeyDown);
+
+    // Push a new state to the history so the popstate event fires on back.
     history.pushState(null, '', location.href);
-    window.addEventListener('popstate', handlePopState);
 
     return () => {
+      window.removeEventListener('popstate', handleExit);
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('popstate', handlePopState);
     };
-  }, []);
+  }, [handleExit]);
 
 
   // Load campaign data
@@ -59,7 +63,6 @@ export default function PlayPage() {
         setCampaign(foundCampaign);
       } else {
         // If campaign not found, navigate away.
-        // This is necessary for initialization but won't be triggerable by user.
         router.push('/');
       }
     }
@@ -81,8 +84,6 @@ export default function PlayPage() {
   useEffect(() => {
     if (!campaign || campaign.media.length === 0) {
       if (campaign && loaded) {
-        // This navigation will be blocked by the popstate handler, but
-        // it's a safe fallback in case of an empty campaign.
         router.push('/');
       }
       return;
@@ -112,16 +113,11 @@ export default function PlayPage() {
       videoElement.onerror = goToNext; // Silently skip on error
       videoElement.src = objectUrl;
       
-      // Muted autoplay workaround for webviews
-      videoElement.muted = true; 
       const playPromise = videoElement.play();
       
       if (playPromise !== undefined) {
-        playPromise.then(() => {
-            // Unmute once playback has started.
-            videoElement.muted = false;
-        }).catch(err => {
-            // If even muted autoplay fails, just skip.
+        playPromise.catch(err => {
+            // If autoplay fails, just skip.
             goToNext();
         });
       }
@@ -147,7 +143,7 @@ export default function PlayPage() {
   }
 
   return (
-    <div onDoubleClick={(e) => e.preventDefault()} className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
+    <div onDoubleClick={handleExit} className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="w-full h-full">
         <Image
             src={(activeItem?.type === 'image' && activeUrl) ? activeUrl : BLANK_IMAGE}

@@ -52,11 +52,22 @@ function getDb() {
 
 // Campaign Functions
 export async function getCampaignsFromDb(): Promise<Campaign[]> {
-  const db = await getDb();
-  if (!db) return []; // Return empty array on server
-  const campaigns = await db.getAll(CAMPAIGNS_STORE);
-  // Defensively filter out any items that aren't valid campaign objects
-  return campaigns.filter(c => typeof c === 'object' && c !== null && typeof c.id === 'string' && Array.isArray(c.media));
+  try {
+    const db = await getDb();
+    if (!db) return []; // Return empty array on server
+    const campaigns = await db.getAll(CAMPAIGNS_STORE);
+    
+    if (!Array.isArray(campaigns)) {
+      console.error("Corrupted campaigns data in DB, expected an array.");
+      return [];
+    }
+    
+    // Defensively filter out any items that aren't valid campaign objects
+    return campaigns.filter(c => typeof c === 'object' && c !== null && typeof c.id === 'string' && Array.isArray(c.media));
+  } catch (error) {
+    console.error("Failed to get campaigns from DB.", error);
+    return [];
+  }
 }
 
 export async function saveCampaignToDb(campaign: Campaign): Promise<void> {
@@ -80,20 +91,34 @@ const DEFAULTS: AppSettings = {
 };
 
 export async function getSettingsFromDb(): Promise<AppSettings> {
-  const db = await getDb();
-  if (!db) return DEFAULTS; // Return defaults on server
-  let settings = await db.get(SETTINGS_STORE, SETTINGS_KEY);
-  
-  // Clean up old properties if they exist from previous versions
-  if (settings && typeof settings === 'object') {
-     if ('startupCampaignId' in settings) {
-      delete (settings as any).startupCampaignId;
+  try {
+    const db = await getDb();
+    if (!db) return DEFAULTS;
+    
+    let settings = await db.get(SETTINGS_STORE, SETTINGS_KEY);
+
+    // If settings from DB is a string, it might be legacy JSON data.
+    if (typeof settings === 'string') {
+        if (settings) {
+            settings = JSON.parse(settings);
+        } else {
+            settings = {}; // Empty string, treat as empty object
+        }
     }
-  } else {
-    settings = {};
+    
+    if (settings && typeof settings === 'object' && !Array.isArray(settings)) {
+      // Clean up old properties if they exist from previous versions
+      if ('startupCampaignId' in settings) {
+        delete (settings as any).startupCampaignId;
+      }
+      return { ...DEFAULTS, ...settings };
+    }
+  } catch (error) {
+    console.error("Failed to load or parse settings from DB. Using defaults.", error);
   }
- 
-  return { ...DEFAULTS, ...settings };
+  
+  // If anything fails or data is invalid, return defaults.
+  return DEFAULTS;
 }
 
 export async function saveSettingsToDb(settings: AppSettings): Promise<void> {
